@@ -185,11 +185,11 @@ Redesign the RBT session form to follow an activity-based structure while mainta
       ${activity.behaviors
         .map(
           (behavior) => `
-        - Behavior: ${behavior.behaviorName}
-        - Intensity: ${behavior.intensity}
-        - Interventions: ${behavior.interventionUsed.join(", ")}
-        ${behavior.interventionNotes ? `- Notes: ${behavior.interventionNotes}` : ""}
-        `
+    - Behavior: ${behavior.behaviorName}
+    - Intensity: ${behavior.intensity}
+    - Interventions: ${behavior.interventionUsed.join(", ")}
+    ${behavior.interventionNotes ? `- Notes: ${behavior.interventionNotes}` : ""}
+    `
         )
         .join("\n")}
       
@@ -197,8 +197,8 @@ Redesign the RBT session form to follow an activity-based structure while mainta
       ${activity.promptsUsed
         .map(
           (prompt) => `
-        - ${prompt.type}: ${prompt.count} times
-        `
+    - ${prompt.type}: ${prompt.count} times
+    `
         )
         .join("\n")}
       

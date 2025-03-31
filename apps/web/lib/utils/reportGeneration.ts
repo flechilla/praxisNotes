@@ -6,6 +6,10 @@ import { Report } from "../types/Report";
 import { getClientById } from "../mocks/clientData";
 import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
+import {
+  createNarrativeReportPrompt,
+  createLegacyReportPrompt,
+} from "../prompts/sessionReport";
 
 // Function to calculate session duration from start/end times
 const calculateSessionDuration = (
@@ -29,174 +33,141 @@ const isActivityBased = (
   return "activities" in formData && "initialStatus" in formData;
 };
 
-// Function to format the form data into a prompt for the AI
-export const createReportPrompt = (
+// Function to generate a report using Anthropic's Claude
+export const generateReport = async (
   formData: SessionFormData | ActivityBasedSessionFormData,
   rbtName: string
-): string => {
+): Promise<Report> => {
+  console.log("Generating report");
   const client = getClientById(formData.basicInfo.clientId);
   if (!client) {
     throw new Error("Client not found");
   }
-
-  const { basicInfo, generalNotes } = formData;
+  console.log(`Generating report for ${client.firstName} ${client.lastName}`);
 
   // Calculate session duration
   const sessionDuration = calculateSessionDuration(
-    basicInfo.startTime,
-    basicInfo.endTime
+    formData.basicInfo.startTime,
+    formData.basicInfo.endTime
   );
 
-  // Common header for both formats
-  let prompt = `
-You are a professional Registered Behavior Technician (RBT) writing a session report for a client. Please generate a comprehensive and professional report based on the following session data:
-
-CLIENT INFORMATION:
-- Name: ${client.firstName} ${client.lastName}
-- Date of Birth: ${client.dob}
-- Diagnosis: ${client.diagnosis}
-- Guardian: ${client.guardian}
-
-SESSION INFORMATION:
-- Date: ${basicInfo.sessionDate}
-- Time: ${basicInfo.startTime} to ${basicInfo.endTime} (${sessionDuration})
-- Location: ${basicInfo.location}
-- RBT: ${rbtName}
-`;
-
-  // Check which format of form data we have
+  // Choose the appropriate prompt template based on the form data type
+  let prompt: string;
   if (isActivityBased(formData)) {
-    // Activity-based format
-    const { initialStatus, activities } = formData;
-
-    prompt += `
-CLIENT INITIAL STATUS:
-- Status on arrival: ${initialStatus.clientStatus}
-${initialStatus.caregiverReport ? `- Caregiver report: ${initialStatus.caregiverReport}` : ""}
-- Initial response: ${initialStatus.initialResponse}
-${initialStatus.medicationChanges ? `- Medication changes: ${initialStatus.medicationChanges}` : ""}
-
-ACTIVITIES:
-${activities.activities
-  .map(
-    (activity, index) => `
-Activity ${index + 1}: ${activity.name}
-- Description: ${activity.description}
-- Goal: ${activity.goal}
-- Location: ${activity.location}
-${activity.duration ? `- Duration: ${activity.duration} minutes` : ""}
-
-${
-  activity.behaviors.length > 0
-    ? `Behaviors During Activity:
-${activity.behaviors
-  .map(
-    (behavior) => `
-- Behavior: ${behavior.behaviorName}
-- Intensity: ${behavior.intensity}
-- Interventions: ${behavior.interventionUsed.join(", ")}
-${behavior.interventionNotes ? `- Notes: ${behavior.interventionNotes}` : ""}
-`
-  )
-  .join("")}`
-    : ""
-}
-
-${
-  activity.promptsUsed.length > 0
-    ? `Prompts Used:
-${activity.promptsUsed
-  .map(
-    (prompt) => `
-- ${prompt.type}: ${prompt.count} times
-`
-  )
-  .join("")}`
-    : ""
-}
-
-Completion:
-- Status: ${activity.completed ? "Completed" : "Not completed"}
-${activity.completionNotes ? `- Notes: ${activity.completionNotes}` : ""}
-
-Reinforcement:
-- Reinforcer: ${activity.reinforcement.reinforcerName}
-- Type: ${activity.reinforcement.type}
-${activity.reinforcement.notes ? `- Notes: ${activity.reinforcement.notes}` : ""}
-`
-  )
-  .join("\n")}
-`;
+    prompt = createNarrativeReportPrompt(
+      formData,
+      client,
+      rbtName,
+      sessionDuration
+    );
   } else {
-    // Original format
-    const { skillAcquisition, behaviorTracking, reinforcement } = formData;
-
-    prompt += `
-SKILL ACQUISITION:
-${skillAcquisition.skills
-  .map(
-    (skill) => `
-- Program: ${skill.programName || skill.program}
-- Trials: ${skill.trials} (${skill.correct} correct, ${skill.prompted} prompted, ${skill.incorrect} incorrect)
-- Prompt Level: ${skill.promptLevel}
-- Notes: ${skill.notes}
-`
-  )
-  .join("\n")}
-
-BEHAVIOR TRACKING:
-${behaviorTracking.behaviors
-  .map(
-    (behavior) => `
-- Behavior: ${behavior.behaviorName || behavior.name}
-- Frequency: ${behavior.frequency} times
-${behavior.duration ? `- Duration: ${behavior.duration} minutes` : ""}
-${behavior.intensity ? `- Intensity: ${behavior.intensity}` : ""}
-- Antecedent: ${behavior.antecedent}
-- Consequence: ${behavior.consequence}
-- Intervention: ${behavior.intervention}
-`
-  )
-  .join("\n")}
-
-REINFORCEMENT:
-${reinforcement.reinforcers
-  .map(
-    (reinforcer) => `
-- Type: ${reinforcer.reinforcerType || reinforcer.type}
-- Reinforcer: ${reinforcer.reinforcerName || reinforcer.name}
-- Effectiveness: ${reinforcer.effectiveness}/5
-- Notes: ${reinforcer.notes}
-`
-  )
-  .join("\n")}
-`;
+    prompt = createLegacyReportPrompt(
+      formData,
+      client,
+      rbtName,
+      sessionDuration
+    );
   }
 
-  // Common footer for both formats
-  prompt += `
-GENERAL NOTES:
-- Session Notes: ${generalNotes.sessionNotes}
-- Caregiver Feedback: ${generalNotes.caregiverFeedback}
-- Environmental Factors: ${generalNotes.environmentalFactors}
-- Next Session Focus: ${generalNotes.nextSessionFocus}
+  try {
+    console.log("Generating report with Anthropic");
+    const response = await generateText({
+      model: anthropic("claude-3-5-sonnet-20241022"),
+      prompt,
+    });
+    console.log("Report generated with Anthropic");
 
-Please generate a professional report in raw markdown format with the following sections:
-1. Summary
-2. Skill Acquisition
-3. Behavior Management
-4. Reinforcement
-5. Observations
-6. Recommendations
-7. Next Steps
+    const reportContent = response.text;
 
-The report should be written in a professional, clinical tone that would be appropriate for both parents and other healthcare professionals. Include specific data from the session but present it in a narrative format rather than just listing information. Incorporate professional terminology where appropriate.
-`;
+    // For activity-based reports, we're not using sections anymore
+    if (isActivityBased(formData)) {
+      return {
+        clientName: `${client.firstName} ${client.lastName}`,
+        sessionDate: formData.basicInfo.sessionDate,
+        sessionDuration,
+        location: formData.basicInfo.location,
+        rbtName,
+        summary: "", // Not applicable for narrative format
+        skillAcquisition: {
+          title: "Skill Acquisition",
+          content: "", // Not applicable for narrative format
+        },
+        behaviorManagement: {
+          title: "Behavior Management",
+          content: "", // Not applicable for narrative format
+        },
+        reinforcement: {
+          title: "Reinforcement",
+          content: "", // Not applicable for narrative format
+        },
+        observations: {
+          title: "Observations",
+          content: "", // Not applicable for narrative format
+        },
+        recommendations: {
+          title: "Recommendations",
+          content: "", // Not applicable for narrative format
+        },
+        nextSteps: {
+          title: "Next Steps",
+          content: "", // Not applicable for narrative format
+        },
+        fullContent: reportContent,
+        createdAt: new Date().toISOString(),
+        status: "draft",
+      };
+    } else {
+      // For legacy reports, use the section parser
+      const sections = parseReportSections(reportContent);
 
-  return prompt;
+      return {
+        clientName: `${client.firstName} ${client.lastName}`,
+        sessionDate: formData.basicInfo.sessionDate,
+        sessionDuration,
+        location: formData.basicInfo.location,
+        rbtName,
+        summary: sections.summary || "No summary provided.",
+        skillAcquisition: {
+          title: "Skill Acquisition",
+          content:
+            sections.skillAcquisition || "No skill acquisition data provided.",
+        },
+        behaviorManagement: {
+          title: "Behavior Management",
+          content:
+            sections.behaviorManagement ||
+            "No behavior management data provided.",
+        },
+        reinforcement: {
+          title: "Reinforcement",
+          content: sections.reinforcement || "No reinforcement data provided.",
+        },
+        observations: {
+          title: "Observations",
+          content: sections.observations || "No observations provided.",
+        },
+        recommendations: {
+          title: "Recommendations",
+          content: sections.recommendations || "No recommendations provided.",
+        },
+        nextSteps: {
+          title: "Next Steps",
+          content: sections.nextSteps || "No next steps provided.",
+        },
+        fullContent: reportContent,
+        createdAt: new Date().toISOString(),
+        status: "draft",
+      };
+    }
+  } catch (error) {
+    console.error("Error generating report:", error);
+    throw new Error(
+      "Failed to generate report using AI. Please try again later."
+    );
+  }
 };
 
-// Function to parse the generated content into sections
+// Function to parse the generated content into sections (for legacy reports)
 export const parseReportSections = (content: string) => {
   const sections: Record<string, string> = {};
 
@@ -257,84 +228,4 @@ export const parseReportSections = (content: string) => {
   }
 
   return sections;
-};
-
-// Function to generate a report using Anthropic's Claude
-export const generateReport = async (
-  formData: SessionFormData | ActivityBasedSessionFormData,
-  rbtName: string
-): Promise<Report> => {
-  console.log("Generating report");
-  const client = getClientById(formData.basicInfo.clientId);
-  if (!client) {
-    throw new Error("Client not found");
-  }
-  console.log(`Generating report for ${client.firstName} ${client.lastName}`);
-  console.log("formData", formData);
-  const prompt = createReportPrompt(formData, rbtName);
-
-  try {
-    console.log("Generating report with Anthropic");
-    const response = await generateText({
-      model: anthropic("claude-3-5-sonnet-20241022"),
-      prompt,
-    });
-    console.log("Report generated with Anthropic");
-    console.log("response", response.text);
-    // Extract the text content from the response
-    const reportContent = response.text;
-
-    // Parse the generated content into sections
-    const sections = parseReportSections(reportContent);
-
-    // Calculate session duration
-    const sessionDuration = calculateSessionDuration(
-      formData.basicInfo.startTime,
-      formData.basicInfo.endTime
-    );
-
-    return {
-      clientName: `${client.firstName} ${client.lastName}`,
-      sessionDate: formData.basicInfo.sessionDate,
-      sessionDuration,
-      location: formData.basicInfo.location,
-      rbtName,
-      summary: sections.summary || "No summary provided.",
-      skillAcquisition: {
-        title: "Skill Acquisition",
-        content:
-          sections.skillAcquisition || "No skill acquisition data provided.",
-      },
-      behaviorManagement: {
-        title: "Behavior Management",
-        content:
-          sections.behaviorManagement ||
-          "No behavior management data provided.",
-      },
-      reinforcement: {
-        title: "Reinforcement",
-        content: sections.reinforcement || "No reinforcement data provided.",
-      },
-      observations: {
-        title: "Observations",
-        content: sections.observations || "No observations provided.",
-      },
-      recommendations: {
-        title: "Recommendations",
-        content: sections.recommendations || "No recommendations provided.",
-      },
-      nextSteps: {
-        title: "Next Steps",
-        content: sections.nextSteps || "No next steps provided.",
-      },
-      fullContent: reportContent,
-      createdAt: new Date().toISOString(),
-      status: "draft",
-    };
-  } catch (error) {
-    console.error("Error generating report:", error);
-    throw new Error(
-      "Failed to generate report using AI. Please try again later."
-    );
-  }
 };

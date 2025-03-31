@@ -28,6 +28,15 @@ export const mockClients: ClientInfo[] = [
     diagnosis: "Developmental Delay",
     provider: "Growing Minds Center",
   },
+  {
+    id: "c4",
+    firstName: "Brandon",
+    lastName: "Morris",
+    dob: "2017-06-15",
+    guardian: "Victoria Brown",
+    diagnosis: "Autism Spectrum Disorder, Level 2",
+    provider: "Sunshine Behavioral Health",
+  },
 ];
 
 export const getClientById = (id: string): ClientInfo | undefined => {

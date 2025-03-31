@@ -42,8 +42,8 @@ export default function ReportGeneration({
     // Send the form data and RBT name
     body: {
       formData,
-      rbtName: "John Doe", // Mock RBT name
-      isActivityBased,
+      rbtName: "Kelly Xu", // Match RBT initials (KX) from narrative
+      isActivityBased, // This flag helps the API determine the report format
     },
     // Use data stream protocol
     streamProtocol: "data",
@@ -108,6 +108,9 @@ export default function ReportGeneration({
   const handleManualGeneration = async () => {
     setIsGenerating(true);
   };
+
+  // For narrative reports, we don't need to display sections
+  const isNarrativeFormat = isActivityBased;
 
   // Show loading state
   if (
@@ -215,7 +218,7 @@ export default function ReportGeneration({
           <div className="border p-4 rounded-md">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-semibold text-gray-800 text-lg">
-                Report Content
+                {isNarrativeFormat ? "Session Narrative" : "Report Content"}
               </h3>
               <button
                 onClick={toggleEditMode}
@@ -234,7 +237,13 @@ export default function ReportGeneration({
                 />
               </div>
             ) : (
-              <div className="prose max-w-none">
+              <div
+                className={
+                  isNarrativeFormat
+                    ? "prose max-w-none text-gray-700 leading-relaxed"
+                    : "prose max-w-none"
+                }
+              >
                 <ReactMarkdown>{editableMarkdown}</ReactMarkdown>
               </div>
             )}

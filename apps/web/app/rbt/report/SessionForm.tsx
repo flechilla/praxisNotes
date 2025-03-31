@@ -63,26 +63,126 @@ export default function SessionForm() {
   const [activityBasedFormData, setActivityBasedFormData] =
     useState<ActivityBasedSessionFormData>({
       basicInfo: {
-        clientId: clientIdParam as string,
+        clientId: clientIdParam || "c4", // Default to Brandon Morris if no ID provided
         sessionDate: String(new Date().toISOString().split("T")[0]),
-        startTime: "",
-        endTime: "",
-        location: "",
+        startTime: "10:00",
+        endTime: "11:30",
+        location: "Home",
       },
       initialStatus: {
-        clientStatus: "",
-        caregiverReport: "",
-        initialResponse: "",
-        medicationChanges: "",
+        clientStatus: "Sitting on the sofa with his tablet",
+        caregiverReport: "Client has allergies",
+        initialResponse:
+          "Responded to greeting after approximately five seconds",
+        medicationChanges: "No changes in medication reported",
       },
       activities: {
-        activities: [],
+        activities: [
+          {
+            name: "Building with Legos",
+            description: "Create figures with mini Legos at the table",
+            goal: "Request favorite items",
+            location: "Table in living room",
+            duration: 20,
+            behaviors: [
+              {
+                behaviorName: "Self-injurious behavior (SIB)",
+                intensity: "1 - mild",
+                interventionUsed: ["Response Blocking", "Redirection"],
+                interventionNotes:
+                  "Instructed client to place his hands on the table and asked him to make a square",
+              },
+            ],
+            promptsUsed: [
+              {
+                type: "Verbal",
+                count: 2,
+              },
+            ],
+            completed: true,
+            completionNotes:
+              "Client appropriately requested a tangible item (tablet)",
+            reinforcement: {
+              reinforcerName: "Tablet time",
+              type: "Tangible",
+              notes: "Five minutes of tablet time",
+            },
+          },
+          {
+            name: "Card Activity",
+            description: "Hand over cards with figures as directed",
+            goal: "Delay reinforcements",
+            location: "Living room",
+            duration: 15,
+            behaviors: [
+              {
+                behaviorName: "Throwing objects",
+                intensity: "1 - mild",
+                interventionUsed: [
+                  "Redirection",
+                  "Differential Reinforcement of Other Behavior (DRO)",
+                ],
+                interventionNotes:
+                  "Reintroduced the activity and reinforced with gummy each time he spent two minutes on task without throwing cards",
+              },
+            ],
+            promptsUsed: [
+              {
+                type: "Gestural",
+                count: 4,
+              },
+              {
+                type: "Verbal",
+                count: 3,
+              },
+            ],
+            completed: true,
+            completionNotes: "Client completed activity after multiple prompts",
+            reinforcement: {
+              reinforcerName: "Break",
+              type: "Break",
+              notes: "Short break after completion",
+            },
+          },
+          {
+            name: "Organizing Toys",
+            description: "Organizing toys in room",
+            goal: "Remain on task",
+            location: "Client's room",
+            duration: 20,
+            behaviors: [
+              {
+                behaviorName: "Physical aggression",
+                intensity: "1 - mild",
+                interventionUsed: [
+                  "Escape Extinction",
+                  "Differential Reinforcement of Incompatible Behavior (DRI)",
+                ],
+                interventionNotes:
+                  "Removed toy from his hand and provided only plush toys",
+              },
+            ],
+            promptsUsed: [],
+            completed: true,
+            completionNotes:
+              "Client completed activity without the emergence of other maladaptive behaviors",
+            reinforcement: {
+              reinforcerName: "Chips",
+              type: "Edible",
+              notes: "Provided chips as reinforcement",
+            },
+          },
+        ],
       },
       generalNotes: {
-        sessionNotes: "",
-        caregiverFeedback: "",
-        environmentalFactors: "",
-        nextSessionFocus: "",
+        sessionNotes:
+          "Client responded to interventions throughout the session. Multiple behaviors were observed but were maintained at low intensity levels.",
+        caregiverFeedback:
+          "Mother (VB) was present during the session and reported the client's allergies.",
+        environmentalFactors:
+          "Session conducted at home. The RBT followed all health protocols, washing hands and using hand sanitizer frequently.",
+        nextSessionFocus:
+          "Continue working on requesting preferred items and reducing instances of throwing objects. Maintain focus on replacing SIB with appropriate requesting behaviors.",
       },
     });
 
@@ -202,26 +302,127 @@ export default function SessionForm() {
     if (USE_ACTIVITY_BASED_FLOW) {
       setActivityBasedFormData({
         basicInfo: {
-          clientId: clientIdParam as string,
+          clientId: clientIdParam || "c4", // Default to Brandon Morris if no ID provided
           sessionDate: String(new Date().toISOString().split("T")[0]),
-          startTime: "",
-          endTime: "",
-          location: "",
+          startTime: "10:00",
+          endTime: "11:30",
+          location: "Home",
         },
         initialStatus: {
-          clientStatus: "",
-          caregiverReport: "",
-          initialResponse: "",
-          medicationChanges: "",
+          clientStatus: "Sitting on the sofa with his tablet",
+          caregiverReport: "Client has allergies",
+          initialResponse:
+            "Responded to greeting after approximately five seconds",
+          medicationChanges: "No changes in medication reported",
         },
         activities: {
-          activities: [],
+          activities: [
+            {
+              name: "Building with Legos",
+              description: "Create figures with mini Legos at the table",
+              goal: "Request favorite items",
+              location: "Table in living room",
+              duration: 20,
+              behaviors: [
+                {
+                  behaviorName: "Self-injurious behavior (SIB)",
+                  intensity: "1 - mild",
+                  interventionUsed: ["Response Blocking", "Redirection"],
+                  interventionNotes:
+                    "Instructed client to place his hands on the table and asked him to make a square",
+                },
+              ],
+              promptsUsed: [
+                {
+                  type: "Verbal",
+                  count: 2,
+                },
+              ],
+              completed: true,
+              completionNotes:
+                "Client appropriately requested a tangible item (tablet)",
+              reinforcement: {
+                reinforcerName: "Tablet time",
+                type: "Tangible",
+                notes: "Five minutes of tablet time",
+              },
+            },
+            {
+              name: "Card Activity",
+              description: "Hand over cards with figures as directed",
+              goal: "Delay reinforcements",
+              location: "Living room",
+              duration: 15,
+              behaviors: [
+                {
+                  behaviorName: "Throwing objects",
+                  intensity: "1 - mild",
+                  interventionUsed: [
+                    "Redirection",
+                    "Differential Reinforcement of Other Behavior (DRO)",
+                  ],
+                  interventionNotes:
+                    "Reintroduced the activity and reinforced with gummy each time he spent two minutes on task without throwing cards",
+                },
+              ],
+              promptsUsed: [
+                {
+                  type: "Gestural",
+                  count: 4,
+                },
+                {
+                  type: "Verbal",
+                  count: 3,
+                },
+              ],
+              completed: true,
+              completionNotes:
+                "Client completed activity after multiple prompts",
+              reinforcement: {
+                reinforcerName: "Break",
+                type: "Break",
+                notes: "Short break after completion",
+              },
+            },
+            {
+              name: "Organizing Toys",
+              description: "Organizing toys in room",
+              goal: "Remain on task",
+              location: "Client's room",
+              duration: 20,
+              behaviors: [
+                {
+                  behaviorName: "Physical aggression",
+                  intensity: "1 - mild",
+                  interventionUsed: [
+                    "Escape Extinction",
+                    "Differential Reinforcement of Incompatible Behavior (DRI)",
+                  ],
+                  interventionNotes:
+                    "Removed toy from his hand and provided only plush toys",
+                },
+              ],
+              promptsUsed: [],
+              completed: true,
+              completionNotes:
+                "Client completed activity without the emergence of other maladaptive behaviors",
+              reinforcement: {
+                reinforcerName: "Chips",
+                type: "Edible",
+                notes: "Provided chips as reinforcement",
+              },
+            },
+          ],
         },
         generalNotes: {
-          sessionNotes: "",
-          caregiverFeedback: "",
-          environmentalFactors: "",
-          nextSessionFocus: "",
+          sessionNotes:
+            "Client responded to interventions throughout the session. Multiple behaviors were observed but were maintained at low intensity levels.",
+          caregiverFeedback:
+            "Mother (VB) was present during the session and reported the client's allergies.",
+          environmentalFactors:
+            "Session conducted at home. The RBT followed all health protocols, washing hands and using hand sanitizer frequently.",
+          nextSessionFocus:
+            "Continue working on requesting preferred items and reducing instances of throwing objects. Maintain focus on replacing SIB with appropriate requesting behaviors.",
         },
       });
       setCurrentActivityStep("basicInfo");
@@ -349,6 +550,7 @@ export default function SessionForm() {
             formData={formData}
             onBack={handleBack}
             onReset={handleReset}
+            isActivityBased={false}
           />
         );
       default:
@@ -398,10 +600,10 @@ export default function SessionForm() {
         return (
           <ReportGeneration
             // Convert activity-based form data to the format expected by ReportGeneration
-            // In a real implementation, we would update ReportGeneration to handle both formats
-            formData={formData}
+            formData={activityBasedFormData}
             onBack={handleBack}
             onReset={handleReset}
+            isActivityBased={true}
           />
         );
       default:
@@ -412,7 +614,7 @@ export default function SessionForm() {
   const handleSubmitForm = async () => {
     try {
       setIsSubmitting(true);
-      const rbtName = "John Doe"; // Replace with actual logged-in RBT
+      const rbtName = "Kelly Xu"; // Match RBT initials (KX) from narrative
       let reportData;
 
       // Convert activity-based form to report

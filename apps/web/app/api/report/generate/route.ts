@@ -1,19 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Report } from "../../../../lib/types/Report";
-import { SessionFormData } from "../../../../lib/types/SessionForm";
+import {
+  SessionFormData,
+  ActivityBasedSessionFormData,
+} from "../../../../lib/types/SessionForm";
 import { anthropic } from "@ai-sdk/anthropic";
 import { streamText, createDataStreamResponse } from "ai";
-import { createReportPrompt } from "../../../../lib/utils/reportGeneration";
+import {
+  createNarrativeReportPrompt,
+  createLegacyReportPrompt,
+} from "../../../../lib/prompts/sessionReport";
 import { getClientById } from "../../../../lib/mocks/clientData";
+
+// Function to check if form data is activity-based
+const isActivityBased = (
+  formData: SessionFormData | ActivityBasedSessionFormData
+): formData is ActivityBasedSessionFormData => {
+  return "activities" in formData && "initialStatus" in formData;
+};
+
+// Function to calculate session duration
+const calculateSessionDuration = (
+  startTime: string,
+  endTime: string
+): string => {
+  const start = new Date(`1970-01-01T${startTime}`);
+  const end = new Date(`1970-01-01T${endTime}`);
+  const durationMs = end.getTime() - start.getTime();
+  const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
+  const durationMinutes = Math.floor(
+    (durationMs % (1000 * 60 * 60)) / (1000 * 60)
+  );
+  return `${durationHours > 0 ? `${durationHours} hour${durationHours > 1 ? "s" : ""}` : ""} ${durationMinutes} minute${durationMinutes > 1 ? "s" : ""}`.trim();
+};
 
 export async function POST(request: NextRequest) {
   console.log("Report generation API called");
   try {
     // Parse request body
     const body = await request.json();
-    const { formData, rbtName } = body as {
-      formData: SessionFormData;
+    const {
+      formData,
+      rbtName,
+      isActivityBased: forceActivityBased,
+    } = body as {
+      formData: SessionFormData | ActivityBasedSessionFormData;
       rbtName: string;
+      isActivityBased?: boolean;
     };
 
     // Validate required fields
@@ -25,25 +58,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate form data structure
-    if (
-      !formData.basicInfo ||
-      !formData.skillAcquisition ||
-      !formData.behaviorTracking ||
-      !formData.reinforcement ||
-      !formData.generalNotes
-    ) {
-      console.error("Report generation failed: Incomplete form data");
-      return NextResponse.json(
-        { error: "Incomplete form data: all sections are required" },
-        { status: 400 }
-      );
+    // Determine if the form data is activity-based
+    const activityBasedForm = forceActivityBased || isActivityBased(formData);
+
+    // Validate form data structure based on its type
+    if (activityBasedForm) {
+      const activityForm = formData as ActivityBasedSessionFormData;
+      if (
+        !activityForm.basicInfo ||
+        !activityForm.initialStatus ||
+        !activityForm.activities ||
+        !activityForm.generalNotes
+      ) {
+        console.error("Report generation failed: Incomplete form data");
+        return NextResponse.json(
+          { error: "Incomplete form data: all sections are required" },
+          { status: 400 }
+        );
+      }
+    } else {
+      const standardForm = formData as SessionFormData;
+      if (
+        !standardForm.basicInfo ||
+        !standardForm.skillAcquisition ||
+        !standardForm.behaviorTracking ||
+        !standardForm.reinforcement ||
+        !standardForm.generalNotes
+      ) {
+        console.error("Report generation failed: Incomplete form data");
+        return NextResponse.json(
+          { error: "Incomplete form data: all sections are required" },
+          { status: 400 }
+        );
+      }
     }
 
-    // Create prompt for AI
-    const prompt = createReportPrompt(formData, rbtName);
-
-    // Prepare client information for the report object
+    // Get client information
     const client = getClientById(formData.basicInfo.clientId);
     if (!client) {
       console.error(
@@ -53,15 +103,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate session duration
-    const startTime = new Date(`1970-01-01T${formData.basicInfo.startTime}`);
-    const endTime = new Date(`1970-01-01T${formData.basicInfo.endTime}`);
-    const durationMs = endTime.getTime() - startTime.getTime();
-    const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
-    const durationMinutes = Math.floor(
-      (durationMs % (1000 * 60 * 60)) / (1000 * 60)
+    const sessionDuration = calculateSessionDuration(
+      formData.basicInfo.startTime,
+      formData.basicInfo.endTime
     );
-    const sessionDuration =
-      `${durationHours > 0 ? `${durationHours} hour${durationHours > 1 ? "s" : ""}` : ""} ${durationMinutes} minute${durationMinutes > 1 ? "s" : ""}`.trim();
+
+    // Create prompt for AI based on form type
+    let prompt: string;
+    if (activityBasedForm) {
+      prompt = createNarrativeReportPrompt(
+        formData as ActivityBasedSessionFormData,
+        client,
+        rbtName,
+        sessionDuration
+      );
+    } else {
+      prompt = createLegacyReportPrompt(
+        formData as SessionFormData,
+        client,
+        rbtName,
+        sessionDuration
+      );
+    }
 
     // Create a base report with form data
     const baseReport: Omit<Report, "fullContent"> = {
@@ -111,7 +174,7 @@ export async function POST(request: NextRequest) {
 
         // Generate the report
         const result = streamText({
-          model: anthropic("claude-3-5-haiku-20241022"),
+          model: anthropic("claude-3-5-sonnet-20241022"),
           prompt,
         });
 
