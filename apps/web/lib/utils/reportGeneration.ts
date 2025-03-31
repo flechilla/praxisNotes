@@ -1,12 +1,8 @@
 import { SessionFormData } from "../types/SessionForm";
 import { Report } from "../types/Report";
 import { getClientById } from "../mocks/clientData";
-import Anthropic from "@anthropic-ai/sdk";
-
-// Initialize Anthropic client
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || "",
-});
+import { anthropic } from "@ai-sdk/anthropic";
+import { generateText } from "ai";
 
 // Function to format the form data into a prompt for the AI
 export const createReportPrompt = (
@@ -125,21 +121,15 @@ export const generateReport = async (
   const prompt = createReportPrompt(formData, rbtName);
 
   try {
-    const response = await anthropic.messages.create({
-      model: "claude-3-opus-20240229",
-      max_tokens: 4000,
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
+    console.log("Generating report with Anthropic");
+    const response = await generateText({
+      model: anthropic("claude-3-opus-20240229"),
+      prompt,
     });
+    console.log("Report generated with Anthropic");
 
     // Extract the text content from the response
-    const contentBlock = response.content[0];
-    const reportContent =
-      typeof contentBlock === "object" &&
-      "type" in contentBlock &&
-      contentBlock.type === "text"
-        ? contentBlock.text
-        : "";
+    const reportContent = response.text;
 
     // Parse the generated content into sections
     const sections = parseReportSections(reportContent);
