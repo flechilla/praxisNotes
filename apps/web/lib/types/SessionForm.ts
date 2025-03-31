@@ -25,6 +25,7 @@ export type Skill = {
   mastery: number;
   notes: string;
   programId?: string;
+  targetId?: string;
   programName?: string;
   correct?: number;
   prompted?: number;

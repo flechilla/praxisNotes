@@ -1,17 +1,30 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   SkillAcquisitionFormData,
   Skill,
 } from "../../../../lib/types/SessionForm";
 import { promptLevelOptions } from "../../constants/formOptions";
+import {
+  getSkillPrograms,
+  getTargetsByProgramId,
+  SkillProgramOption,
+  SkillTargetOption,
+} from "../../../../lib/mocks/skillsData";
+import LoadingSpinner from "../../../../components/ui/LoadingSpinner";
 
 type SkillAcquisitionProps = {
   data: SkillAcquisitionFormData;
   updateData: (data: SkillAcquisitionFormData) => void;
   onNext: () => void;
   onBack: () => void;
+};
+
+// Extend the Skill type for the form
+type SkillFormData = Skill & {
+  programId?: string;
+  targetId?: string;
 };
 
 export default function SkillAcquisition({
@@ -21,7 +34,7 @@ export default function SkillAcquisition({
   onBack,
 }: SkillAcquisitionProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [currentSkill, setCurrentSkill] = useState<Skill>({
+  const [currentSkill, setCurrentSkill] = useState<SkillFormData>({
     name: "",
     target: "",
     program: "",
@@ -34,6 +47,52 @@ export default function SkillAcquisition({
     incorrect: 0,
   });
   const [showAddSkillForm, setShowAddSkillForm] = useState(false);
+
+  // State for predefined options
+  const [programs, setPrograms] = useState<SkillProgramOption[]>([]);
+  const [targetSkills, setTargetSkills] = useState<SkillTargetOption[]>([]);
+  const [loadingPrograms, setLoadingPrograms] = useState(false);
+  const [loadingTargets, setLoadingTargets] = useState(false);
+  const [selectedProgram, setSelectedProgram] = useState<string>("");
+
+  // Fetch skill programs on component mount
+  useEffect(() => {
+    const fetchPrograms = async () => {
+      setLoadingPrograms(true);
+      try {
+        const programsData = await getSkillPrograms();
+        setPrograms(programsData);
+      } catch (error) {
+        console.error("Error fetching programs:", error);
+      } finally {
+        setLoadingPrograms(false);
+      }
+    };
+
+    fetchPrograms();
+  }, []);
+
+  // Fetch target skills when program changes
+  useEffect(() => {
+    const fetchTargetSkills = async () => {
+      if (!selectedProgram) {
+        setTargetSkills([]);
+        return;
+      }
+
+      setLoadingTargets(true);
+      try {
+        const targetsData = await getTargetsByProgramId(selectedProgram);
+        setTargetSkills(targetsData);
+      } catch (error) {
+        console.error("Error fetching target skills:", error);
+      } finally {
+        setLoadingTargets(false);
+      }
+    };
+
+    fetchTargetSkills();
+  }, [selectedProgram]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -79,7 +138,33 @@ export default function SkillAcquisition({
   ) => {
     const { name, value } = e.target;
 
-    if (
+    if (name === "program") {
+      // When program changes, update the selectedProgram state to trigger target skills loading
+      setSelectedProgram(value);
+
+      // Find the program object
+      const selectedProgramObj = programs.find((prog) => prog.id === value);
+
+      // Update the current skill with the program name
+      setCurrentSkill({
+        ...currentSkill,
+        program: selectedProgramObj ? selectedProgramObj.name : value,
+        programId: value, // Store the program ID for reference
+        target: "", // Reset target when program changes
+        targetId: "", // Reset targetId when program changes
+      });
+    } else if (name === "target") {
+      // Find the target object
+      const selectedTargetObj = targetSkills.find(
+        (target) => target.id === value
+      );
+
+      setCurrentSkill({
+        ...currentSkill,
+        target: selectedTargetObj ? selectedTargetObj.name : value,
+        targetId: value, // Store the target ID for reference
+      });
+    } else if (
       ["trials", "mastery", "correct", "prompted", "incorrect"].includes(name)
     ) {
       setCurrentSkill({
@@ -120,7 +205,10 @@ export default function SkillAcquisition({
         correct: 0,
         prompted: 0,
         incorrect: 0,
+        programId: "",
+        targetId: "",
       });
+      setSelectedProgram("");
       setShowAddSkillForm(false);
       setErrors({});
     }
@@ -176,14 +264,27 @@ export default function SkillAcquisition({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Program
                   </label>
-                  <input
-                    type="text"
-                    name="program"
-                    value={currentSkill.program}
-                    onChange={handleChange}
-                    className="w-full p-2 border rounded"
-                    placeholder="Name of program"
-                  />
+                  <div className="relative">
+                    <select
+                      name="program"
+                      value={selectedProgram}
+                      onChange={handleChange}
+                      className="w-full p-2 border rounded"
+                      disabled={loadingPrograms}
+                    >
+                      <option value="">Select a program</option>
+                      {programs.map((program) => (
+                        <option key={program.id} value={program.id}>
+                          {program.name}
+                        </option>
+                      ))}
+                    </select>
+                    {loadingPrograms && (
+                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                        <LoadingSpinner size="small" />
+                      </div>
+                    )}
+                  </div>
                   {errors.program && (
                     <p className="text-red-500 text-sm mt-1">
                       {errors.program}
@@ -194,14 +295,27 @@ export default function SkillAcquisition({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Target Skill
                   </label>
-                  <input
-                    type="text"
-                    name="target"
-                    value={currentSkill.target}
-                    onChange={handleChange}
-                    className="w-full p-2 border rounded"
-                    placeholder="Specific target"
-                  />
+                  <div className="relative">
+                    <select
+                      name="target"
+                      value={currentSkill.targetId || ""}
+                      onChange={handleChange}
+                      className="w-full p-2 border rounded"
+                      disabled={loadingTargets || !selectedProgram}
+                    >
+                      <option value="">Select a target skill</option>
+                      {targetSkills.map((target) => (
+                        <option key={target.id} value={target.id}>
+                          {target.name}
+                        </option>
+                      ))}
+                    </select>
+                    {loadingTargets && (
+                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                        <LoadingSpinner size="small" />
+                      </div>
+                    )}
+                  </div>
                   {errors.target && (
                     <p className="text-red-500 text-sm mt-1">{errors.target}</p>
                   )}
@@ -286,38 +400,40 @@ export default function SkillAcquisition({
                 </div>
               </div>
 
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Mastery (%)
-                </label>
-                <input
-                  type="number"
-                  name="mastery"
-                  value={currentSkill.mastery}
-                  onChange={handleChange}
-                  min="0"
-                  max="100"
-                  className="w-full p-2 border rounded"
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Prompt Level
-                </label>
-                <select
-                  name="promptLevel"
-                  value={currentSkill.promptLevel}
-                  onChange={handleChange}
-                  className="w-full p-2 border rounded"
-                >
-                  <option value="">Select prompt level</option>
-                  {promptLevelOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mastery Percentage
+                  </label>
+                  <input
+                    type="number"
+                    name="mastery"
+                    value={currentSkill.mastery}
+                    onChange={handleChange}
+                    min="0"
+                    max="100"
+                    className="w-full p-2 border rounded"
+                    placeholder="Mastery percentage (0-100)"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Prompt Level
+                  </label>
+                  <select
+                    name="promptLevel"
+                    value={currentSkill.promptLevel}
+                    onChange={handleChange}
+                    className="w-full p-2 border rounded"
+                  >
+                    <option value="">Select prompt level</option>
+                    {promptLevelOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="mb-4">
@@ -328,20 +444,20 @@ export default function SkillAcquisition({
                   name="notes"
                   value={currentSkill.notes}
                   onChange={handleChange}
+                  rows={2}
                   className="w-full p-2 border rounded"
-                  rows={3}
-                  placeholder="Additional notes about the skill"
+                  placeholder="Additional notes about the skill acquisition"
                 ></textarea>
               </div>
 
-              <div className="flex justify-end space-x-3">
+              <div className="flex justify-end space-x-2">
                 <button
                   type="button"
                   onClick={() => {
                     setShowAddSkillForm(false);
                     setErrors({});
                   }}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition"
                 >
                   Cancel
                 </button>
@@ -350,64 +466,101 @@ export default function SkillAcquisition({
                   onClick={handleAddSkill}
                   className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 transition"
                 >
-                  Add
+                  Add Skill
                 </button>
               </div>
             </div>
           )}
 
+          {/* List of added skills */}
           {data.skills.length > 0 ? (
-            <div className="space-y-3">
-              {data.skills.map((skill, index) => (
-                <div
-                  key={index}
-                  className="p-3 border rounded-lg bg-gray-50 flex justify-between items-center"
-                >
-                  <div>
-                    <h4 className="font-medium">
-                      {skill.name || skill.programName || skill.program}
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      Target: {skill.target}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Trials: {skill.trials} (Correct: {skill.correct},
-                      Prompted: {skill.prompted}, Incorrect: {skill.incorrect})
-                    </p>
-                    {skill.promptLevel && (
-                      <p className="text-sm text-gray-600">
-                        Prompt level: {skill.promptLevel}
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveSkill(index)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
+            <div className="border rounded-lg overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Program
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Target
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Trials
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Mastery
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {data.skills.map((skill, index) => (
+                    <tr key={index}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {skill.program}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {skill.target}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {skill.trials}
+                        <span className="text-xs text-gray-500 ml-1">
+                          ({skill.correct}/{skill.prompted}/{skill.incorrect})
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {skill.mastery}%
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSkill(index)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
-            <div className="text-center p-4 border border-dashed rounded-lg">
-              <p className="text-gray-500">No skills added yet</p>
+            <div className="bg-gray-50 p-4 text-center rounded-lg text-gray-500">
+              No skills added yet. Click the "Add Skill" button to add.
             </div>
           )}
         </div>
 
-        <div className="flex justify-between mt-6">
+        <div className="flex justify-between pt-4">
           <button
             type="button"
             onClick={onBack}
-            className="px-6 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition"
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
           >
             Back
           </button>
+
           <button
             type="submit"
-            className="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
             Next
           </button>

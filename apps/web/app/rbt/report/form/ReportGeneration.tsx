@@ -32,7 +32,7 @@ export default function ReportGeneration({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            sessionData: formData,
+            formData: formData,
             rbtName: "John Doe", // Mock RBT name
           }),
         });
@@ -231,7 +231,7 @@ export default function ReportGeneration({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          sessionData: formData,
+          formData: formData,
           rbtName: "John Doe", // Mock RBT name
         }),
       })

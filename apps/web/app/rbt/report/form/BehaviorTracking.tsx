@@ -1,17 +1,27 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   BehaviorTrackingFormData,
   Behavior,
 } from "../../../../lib/types/SessionForm";
 import { behaviorIntensityOptions } from "../../constants/formOptions";
+import {
+  getAllBehaviors,
+  BehaviorOption,
+} from "../../../../lib/mocks/behaviorsData";
+import LoadingSpinner from "../../../../components/ui/LoadingSpinner";
 
 type BehaviorTrackingProps = {
   data: BehaviorTrackingFormData;
   updateData: (data: BehaviorTrackingFormData) => void;
   onNext: () => void;
   onBack: () => void;
+};
+
+// Extend the Behavior type for the form
+type BehaviorFormData = Behavior & {
+  behaviorId?: string;
 };
 
 export default function BehaviorTracking({
@@ -21,7 +31,7 @@ export default function BehaviorTracking({
   onBack,
 }: BehaviorTrackingProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [currentBehavior, setCurrentBehavior] = useState<Behavior>({
+  const [currentBehavior, setCurrentBehavior] = useState<BehaviorFormData>({
     name: "",
     definition: "",
     frequency: 0,
@@ -33,6 +43,28 @@ export default function BehaviorTracking({
     intervention: "",
   });
   const [showAddBehaviorForm, setShowAddBehaviorForm] = useState(false);
+
+  // State for predefined options
+  const [behaviors, setBehaviors] = useState<BehaviorOption[]>([]);
+  const [loadingBehaviors, setLoadingBehaviors] = useState(false);
+  const [selectedBehaviorId, setSelectedBehaviorId] = useState<string>("");
+
+  // Fetch behaviors on component mount
+  useEffect(() => {
+    const fetchBehaviors = async () => {
+      setLoadingBehaviors(true);
+      try {
+        const behaviorsData = await getAllBehaviors();
+        setBehaviors(behaviorsData);
+      } catch (error) {
+        console.error("Error fetching behaviors:", error);
+      } finally {
+        setLoadingBehaviors(false);
+      }
+    };
+
+    fetchBehaviors();
+  }, []);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -75,7 +107,21 @@ export default function BehaviorTracking({
   ) => {
     const { name, value } = e.target;
 
-    if (["frequency", "duration"].includes(name)) {
+    if (name === "behaviorSelect") {
+      setSelectedBehaviorId(value);
+
+      if (value) {
+        const selectedBehavior = behaviors.find((b) => b.id === value);
+        if (selectedBehavior) {
+          setCurrentBehavior({
+            ...currentBehavior,
+            name: selectedBehavior.name,
+            definition: selectedBehavior.definition,
+            behaviorId: selectedBehavior.id,
+          });
+        }
+      }
+    } else if (["frequency", "duration"].includes(name)) {
       setCurrentBehavior({
         ...currentBehavior,
         [name]: parseInt(value) || 0,
@@ -111,7 +157,9 @@ export default function BehaviorTracking({
         antecedent: "",
         consequence: "",
         intervention: "",
+        behaviorId: "",
       });
+      setSelectedBehaviorId("");
       setShowAddBehaviorForm(false);
       setErrors({});
     }
@@ -162,9 +210,39 @@ export default function BehaviorTracking({
               <h4 className="text-md font-medium mb-3 text-gray-700">
                 Add New Behavior
               </h4>
+
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Behavior Name
+                  Select Predefined Behavior
+                </label>
+                <div className="relative">
+                  <select
+                    name="behaviorSelect"
+                    value={selectedBehaviorId}
+                    onChange={handleChange}
+                    className="w-full p-2 border rounded"
+                    disabled={loadingBehaviors}
+                  >
+                    <option value="">
+                      Select a behavior or enter your own
+                    </option>
+                    {behaviors.map((behavior) => (
+                      <option key={behavior.id} value={behavior.id}>
+                        {behavior.name}
+                      </option>
+                    ))}
+                  </select>
+                  {loadingBehaviors && (
+                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                      <LoadingSpinner size="small" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Behavior Name {selectedBehaviorId ? "(Pre-filled)" : ""}
                 </label>
                 <input
                   type="text"
@@ -181,7 +259,7 @@ export default function BehaviorTracking({
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Definition
+                  Definition {selectedBehaviorId ? "(Pre-filled)" : ""}
                 </label>
                 <textarea
                   name="definition"
@@ -256,14 +334,14 @@ export default function BehaviorTracking({
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Antecedent
                 </label>
-                <textarea
+                <input
+                  type="text"
                   name="antecedent"
                   value={currentBehavior.antecedent}
                   onChange={handleChange}
                   className="w-full p-2 border rounded"
-                  rows={2}
                   placeholder="What happened before the behavior"
-                ></textarea>
+                />
                 {errors.antecedent && (
                   <p className="text-red-500 text-sm mt-1">
                     {errors.antecedent}
@@ -275,14 +353,14 @@ export default function BehaviorTracking({
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Consequence
                 </label>
-                <textarea
+                <input
+                  type="text"
                   name="consequence"
                   value={currentBehavior.consequence}
                   onChange={handleChange}
                   className="w-full p-2 border rounded"
-                  rows={2}
                   placeholder="What happened after the behavior"
-                ></textarea>
+                />
                 {errors.consequence && (
                   <p className="text-red-500 text-sm mt-1">
                     {errors.consequence}
@@ -294,14 +372,14 @@ export default function BehaviorTracking({
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Intervention
                 </label>
-                <textarea
+                <input
+                  type="text"
                   name="intervention"
                   value={currentBehavior.intervention}
                   onChange={handleChange}
                   className="w-full p-2 border rounded"
-                  rows={2}
-                  placeholder="Strategies used to address the behavior"
-                ></textarea>
+                  placeholder="What intervention was used"
+                />
               </div>
 
               <div className="mb-4">
@@ -318,14 +396,14 @@ export default function BehaviorTracking({
                 ></textarea>
               </div>
 
-              <div className="flex justify-end space-x-3">
+              <div className="flex justify-end space-x-2">
                 <button
                   type="button"
                   onClick={() => {
                     setShowAddBehaviorForm(false);
                     setErrors({});
                   }}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition"
                 >
                   Cancel
                 </button>
@@ -334,70 +412,99 @@ export default function BehaviorTracking({
                   onClick={handleAddBehavior}
                   className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 transition"
                 >
-                  Add
+                  Add Behavior
                 </button>
               </div>
             </div>
           )}
 
+          {/* List of added behaviors */}
           {data.behaviors.length > 0 ? (
-            <div className="space-y-3">
-              {data.behaviors.map((behavior, index) => (
-                <div
-                  key={index}
-                  className="p-3 border rounded-lg bg-gray-50 flex justify-between items-start"
-                >
-                  <div>
-                    <h4 className="font-medium">
-                      {behavior.name || behavior.behaviorName}
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      Frequency: {behavior.frequency} | Duration:{" "}
-                      {behavior.duration} min | Intensity: {behavior.intensity}
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      <span className="font-medium">Antecedent:</span>{" "}
-                      {behavior.antecedent}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      <span className="font-medium">Consequence:</span>{" "}
-                      {behavior.consequence}
-                    </p>
-                    {behavior.intervention && (
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Intervention:</span>{" "}
-                        {behavior.intervention}
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveBehavior(index)}
-                    className="text-red-500 hover:text-red-700 mt-1"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
+            <div className="border rounded-lg overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Behavior
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Frequency
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Duration
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Intensity
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {data.behaviors.map((behavior, index) => (
+                    <tr key={index}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {behavior.name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {behavior.frequency}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {behavior.duration} min
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {behavior.intensity.charAt(0).toUpperCase() +
+                          behavior.intensity.slice(1)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveBehavior(index)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
-            <div className="text-center p-4 border border-dashed rounded-lg">
-              <p className="text-gray-500">No behaviors added yet</p>
+            <div className="bg-gray-50 p-4 text-center rounded-lg text-gray-500">
+              No behaviors added yet. Click the "Add Behavior" button to add.
             </div>
           )}
         </div>
 
-        <div className="flex justify-between mt-6">
+        <div className="flex justify-between pt-4">
           <button
             type="button"
             onClick={onBack}
-            className="px-6 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition"
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
           >
             Back
           </button>
+
           <button
             type="submit"
-            className="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
             Next
           </button>
