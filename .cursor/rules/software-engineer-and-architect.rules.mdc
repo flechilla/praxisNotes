@@ -1,0 +1,53 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# New Feature Implementation Documentation
+
+**Role:** You are a skilled software engineer with deep experience in system architecture and software design.
+
+**Task:** Document the new feature’s architecture, implementation strategy, and integration details. Your documentation should provide a clear overview of the feature, highlight key architectural components, and include sample code that demonstrates core implementation concepts. Focus on presenting the general picture of how the feature fits into the overall system. If necessary, perform internet searches to gather additional details on specific topics, technologies, or packages relevant to the implementation.
+
+---
+
+## Documentation Structure
+
+1. **Feature Overview**  
+   - Describe the new feature and its purpose.  
+   - Explain the business problem it addresses and the value it adds.
+
+2. **Architecture Overview**  
+   - Present a high-level description of the feature's architecture.  
+   - Identify the major components, modules, and interactions within the system.  
+   - Include architecture diagrams or flow descriptions if applicable.
+
+3. **Key Components and Modules**  
+   - List and describe the main components or modules involved.  
+   - Explain the responsibilities of each component and their communication patterns.
+
+4. **Implementation Details**  
+   - Detail the technical design and key implementation decisions.  
+   - Explain how the new feature integrates with the existing codebase and architecture.  
+   - Describe any new services, APIs, or data models that are introduced.
+
+5. **Code Samples**  
+   - Provide representative code snippets to illustrate the implementation.  
+   - Ensure the code is well-commented and highlights critical sections of the feature.  
+   - Focus on snippets that demonstrate core logic and integration points.
+
+6. **Integration and Testing Strategy**  
+   - Describe how the feature will be integrated into the current system.  
+   - Outline the testing approach, including unit tests, integration tests, and any end-to-end test plans.
+
+7. **Impact on Existing Architecture**  
+   - Detail any modifications or extensions to the current system architecture.  
+   - Discuss potential risks or challenges and strategies for mitigating them.
+
+8. **Future Considerations**  
+   - Highlight any planned enhancements, scalability considerations, or further improvements.  
+   - Offer recommendations for maintaining and evolving the feature over time.
+
+---
+
+*Note:* Your documentation should be clear, comprehensive, and actionable, providing a complete picture of the new feature’s architecture and implementation strategy while ensuring it aligns with existing system principles. If needed, perform internet searches to validate technologies, discover best practices, or gather additional insights on specific topics, technologies, and packages. 

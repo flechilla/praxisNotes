@@ -1,0 +1,57 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Code Enhancement Review & Documentation Generator
+
+**Role:** You are a senior software architect and code reviewer with deep expertise in identifying areas for improvement in codebases.
+
+**Task:** Analyze the provided codebase and generate a **comprehensive list of specific enhancement opportunities**. For each improvement, document detailed observations and recommendations to elevate the code’s quality, performance, and maintainability.
+
+---
+
+## Enhancement Entry Structure
+
+For each identified enhancement, please include the following sections in your documentation:
+
+1. **Title**  
+   A concise, descriptive name summarizing the enhancement.
+
+2. **Location in Code**  
+   Specify where the issue exists (e.g., file name and line number, function name, class, or component).
+
+3. **Current Code Snippet**  
+   Provide a brief snippet or summary of the existing implementation related to this enhancement.
+
+4. **Issue/Reason for Improvement**  
+   - Explain why this part of the code needs enhancement.
+   - Discuss any risks, inefficiencies, or poor practices observed in the current implementation.
+
+5. **Suggested Enhancement**  
+   - Clearly detail how the code should be improved.
+   - Reference applicable design patterns, best practices, or performance optimizations as needed.
+
+6. **Implementation Steps**  
+   - Outline a step-by-step plan to apply the suggested changes.
+   - Include any guidelines or considerations for developers during implementation.
+
+7. **Impact**  
+   - Describe the expected benefits (e.g., improved performance, readability, scalability, maintainability).
+
+8. **Priority**  
+   - Assign a priority level: `High`, `Medium`, or `Low`.
+
+---
+
+## Enhancement Documentation File Generation
+
+For the most important enhancements, generate a separate Markdown file using the following filename format:
+
+enhancement-<short-title-slug>.doc.md
+
+Replace `<short-title-slug>` with a URL-friendly, lowercase version of the title (for example, `enhancement-improve-authentication`).
+
+---
+
+*Note:* Your analysis should be thorough, clear, and actionable, ensuring that each recommended change is well justified and easy for the development team to implement.

@@ -1,0 +1,104 @@
+---
+description: Guidelines to follow when implementating TypeScript code
+globs: *.ts,*.tsx
+alwaysApply: false
+---
+# TypeScript Code Style and Best Practices
+
+## Type Definitions
+
+- Prefer `type` over `interface` for most type definitions.
+- Use `interfaces` only when leveraging declaration merging.
+- Use descriptive, meaningful names clearly explaining their purpose.
+- Use `PascalCase` for type names and interfaces.
+- Use `readonly` for properties that shouldn't change after initialization.
+- Prefer union types (`type`) over enums when possible.
+- Use type aliases to simplify complex type definitions.
+- Implement only one type definition per file; never define multiple types in a single file.
+- Group type definition files within a dedicated `/types` folder.
+
+## Functions
+
+- Use arrow functions for callbacks and anonymous functions.
+- Explicitly type all function parameters and return types.
+- Use function overloads for complex or conditional function signatures.
+- Prefer `async/await` syntax over raw Promises whenever possible.
+- Use optional parameters instead of multiple overloads when appropriate.
+- Parameters should be encapsulated within a descriptive object (e.g., `data: {name: string, amount: number}`).
+- Always include concise, clear documentation with JSDoc comments.
+
+## Variables and Constants
+
+- Use `const` by default; use `let` only when reassignment is required. Never use `var`.
+- Follow `camelCase` for variable and function names.
+- Prefix private class members with an underscore (`_`).
+- Use `PascalCase` for class names and enum values.
+
+## Imports and Exports
+
+- Always use named exports; avoid default exports.
+- Group imports clearly by source:
+  1. External libraries
+  2. Internal modules
+- Use absolute imports for external packages.
+- Utilize alias imports for internal modules to enhance readability.
+
+## Error Handling
+
+- Use strongly-typed error classes instead of generic `Error`.
+- Always handle Promise rejections explicitly.
+- Prefer `try/catch` blocks for synchronous code that may throw exceptions.
+
+## Generics
+
+- Leverage generics for reusable components.
+- Use descriptive names for generic type parameters (`T` for type, `K` for key, etc.).
+- Always constrain generic types using `extends` when practical.
+
+## Classes
+
+- Minimize class inheritance; favor composition for flexibility.
+- Explicitly define member visibility (`public`, `private`, `protected`).
+- Initialize class properties within constructors when possible.
+- Use getters and setters to encapsulate computed properties.
+- Always document classes and their methods clearly using JSDoc.
+- Limit each file to one class definition; never define multiple classes in a single file.
+
+## Nullability
+
+- Prefer using `undefined` instead of `null`.
+- Use optional chaining (`?.`) and nullish coalescing (`??`) operators to handle nullable values.
+- Avoid the non-null assertion operator (`!`) whenever possible.
+
+## Code Organization
+
+- Maintain one definition per file (class, type, enum).
+- Group related functionalities logically within namespaces or modules.
+- Aim to keep individual files under 300 lines for better maintainability.
+
+## Comments and Documentation
+
+- Use JSDoc consistently for documenting public APIs.
+- Clearly document complex algorithms and logic using inline comments.
+- Mark incomplete implementations with clearly defined `// TODO:` comments.
+
+## Async Code
+
+- Use `async/await` for better readability over raw promises.
+- Always handle errors in asynchronous functions using `try/catch`.
+- Avoid callback patterns; adopt Promise-based approaches.
+
+## Strict Mode and Type Safety
+
+- Enable `strict` mode in `tsconfig.json`.
+- Avoid using `any`; replace it with more specific types whenever possible.
+- Use `unknown` instead of `any` when the exact type is uncertain.
+- Enable `noImplicitAny` and `strictNullChecks` in TypeScript configuration.
+- Regularly review TypeScript rules and lint settings to enforce type safety.
+
+## Performance and Optimization
+
+- Avoid unnecessary computations and loops.
+- Use lazy initialization techniques when dealing with heavy resources.
+- Regularly profile and monitor performance-critical sections.
+
