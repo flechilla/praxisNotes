@@ -1,71 +1,58 @@
-# PraxisNote: RBT Daily Report Assistant
+# Turborepo Tailwind CSS starter
 
-PraxisNote is a specialized application designed to help Registered Behavior Technicians (RBTs) efficiently document and manage daily session data for clients, while facilitating input from Board Certified Behavior Analysts (BCBAs) and automatically generating comprehensive reports.
+This Turborepo starter is maintained by the Turborepo core team.
 
-## Documentation
+## Using this example
 
-### Core Documentation
+Run the following command:
 
-- [Technical Specification](docs/technical-specification.md) - Technical architecture and implementation details
-- [Database Specification](docs/database-specification.md) - Database schema and data relationships
-- [UI/UX Specification](docs/ui-ux-specification.md) - User flows and interface design
-- [Audience Definition](docs/audience-definition.md) - User personas and audience analysis
-- [Accessibility Specification](docs/accessibility-specification.md) - Accessibility requirements and guidelines
-- [RBT User Flow](docs/rbt-user-flow.md) - Detailed flow for RBT users
-- [Implementation Plan](docs/implementation-plan.md) - Step-by-step implementation plan
-
-### Original Design Document
-
-- [PraxisNote Implementation](docs/praxisnote-implementation.md) - Original implementation document
-
-## Key Features
-
-- **User Authentication** - Secure login with role-based access (RBT, BCBA, Administrator)
-- **Client Management** - Manage client profiles and therapy programs
-- **Session Reports** - Structured multi-step form for session documentation
-- **Report Generation** - AI-assisted report generation using ai-sdk
-- **Review System** - Workflow for BCBA review and feedback
-- **Dashboards** - Role-specific dashboards with relevant information
-
-## Development
-
-### Prerequisites
-
-- Node.js 18+
-- npm or yarn
-- PostgreSQL (via Supabase)
-
-### Technologies
-
-- Next.js 14+ with App Router
-- React with TypeScript
-- TailwindCSS & ShadCN UI
-- React Hook Form with Zod
-- Drizzle ORM
-- Next-Auth
-- ai-sdk for report generation
-
-### Getting Started
-
-```bash
-# Clone the repository
-git clone [repository URL]
-
-# Install dependencies
-npm install
-
-# Setup environment variables
-cp .env.example .env.local
-# Edit .env.local with your credentials
-
-# Start development server
-npm run dev
+```sh
+npx create-turbo@latest -e with-tailwind
 ```
 
-## Contributing
+## What's inside?
 
-Please see the [Implementation Plan](docs/implementation-plan.md) for details about the development roadmap. The MVP focuses on report generation from form data.
+This Turborepo includes the following packages/apps:
 
-## License
+### Apps and Packages
 
-[License details]
+- `docs`: a [Next.js](https://nextjs.org/) app with [Tailwind CSS](https://tailwindcss.com/)
+- `web`: another [Next.js](https://nextjs.org/) app with [Tailwind CSS](https://tailwindcss.com/)
+- `ui`: a stub React component library with [Tailwind CSS](https://tailwindcss.com/) shared by both `web` and `docs` applications
+- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
+- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+
+Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+
+### Building packages/ui
+
+This example is set up to produce compiled styles for `ui` components into the `dist` directory. The component `.tsx` files are consumed by the Next.js apps directly using `transpilePackages` in `next.config.ts`. This was chosen for several reasons:
+
+- Make sharing one `tailwind.config.ts` to apps and packages as easy as possible.
+- Make package compilation simple by only depending on the Next.js Compiler and `tailwindcss`.
+- Ensure Tailwind classes do not overwrite each other. The `ui` package uses a `ui-` prefix for it's classes.
+- Maintain clear package export boundaries.
+
+Another option is to consume `packages/ui` directly from source without building. If using this option, you will need to update the `tailwind.config.ts` in your apps to be aware of your package locations, so it can find all usages of the `tailwindcss` class names for CSS compilation.
+
+For example, in [tailwind.config.ts](packages/tailwind-config/tailwind.config.ts):
+
+```js
+  content: [
+    // app content
+    `src/**/*.{js,ts,jsx,tsx}`,
+    // include packages if not transpiling
+    "../../packages/ui/*.{js,ts,jsx,tsx}",
+  ],
+```
+
+If you choose this strategy, you can remove the `tailwindcss` and `autoprefixer` dependencies from the `ui` package.
+
+### Utilities
+
+This Turborepo has some additional tools already setup for you:
+
+- [Tailwind CSS](https://tailwindcss.com/) for styles
+- [TypeScript](https://www.typescriptlang.org/) for static type checking
+- [ESLint](https://eslint.org/) for code linting
+- [Prettier](https://prettier.io) for code formatting
