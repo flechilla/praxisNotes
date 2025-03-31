@@ -9,35 +9,114 @@ import BehaviorTracking from "./form/BehaviorTracking";
 import Reinforcement from "./form/Reinforcement";
 import GeneralNotes from "./form/GeneralNotes";
 import ReportGeneration from "./form/ReportGeneration";
+import { mockClients } from "../../../lib/mocks/clientData";
 
 export default function SessionForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const clientIdParam = searchParams?.get("clientId") ?? "";
+  // Ensure we always have a string for clientId
+  const clientIdParam = (searchParams?.get("clientId") ?? "") as string;
 
-  // Initialize form state with empty values
+  // Initialize form state with default values for testing
   const [formData, setFormData] = useState<SessionFormData>({
     basicInfo: {
       sessionDate: new Date().toISOString().split("T")[0],
-      startTime: "",
-      endTime: "",
-      location: "",
-      clientId: clientIdParam,
+      startTime: "09:00",
+      endTime: "10:30",
+      location: "home",
+      clientId: clientIdParam || "c1", // Hardcoded fallback client ID
     },
     skillAcquisition: {
-      skills: [],
+      skills: [
+        {
+          name: "Communication Training",
+          target: "Requesting items using complete sentences",
+          program: "Communication Training",
+          promptLevel: "verbal",
+          trials: 10,
+          mastery: 80,
+          notes: "Making good progress with verbal prompting",
+          programId: "p1",
+          targetId: "1",
+          correct: 7,
+          prompted: 2,
+          incorrect: 1,
+        },
+        {
+          name: "Social Skills Development",
+          target: "Turn-taking in conversation",
+          program: "Social Skills Development",
+          promptLevel: "gestural",
+          trials: 8,
+          mastery: 75,
+          notes: "Needs reminders to wait for others to finish speaking",
+          programId: "p2",
+          targetId: "2",
+          correct: 5,
+          prompted: 2,
+          incorrect: 1,
+        },
+      ],
     },
     behaviorTracking: {
-      behaviors: [],
+      behaviors: [
+        {
+          name: "Task avoidance",
+          definition: "Refusing to engage in assigned activities",
+          frequency: 3,
+          duration: 5,
+          intensity: "moderate",
+          notes: "Occurs primarily during non-preferred activities",
+          behaviorId: "b3",
+          antecedent: "demand",
+          consequence: "escape",
+          intervention: "redirection",
+        },
+        {
+          name: "Verbal outbursts",
+          definition: "Loud vocalizations without clear communication intent",
+          frequency: 2,
+          duration: 2,
+          intensity: "mild",
+          notes: "Brief episodes, responds well to redirection",
+          behaviorId: "b2",
+          antecedent: "transition",
+          consequence: "attention",
+          intervention: "visual",
+        },
+      ],
     },
     reinforcement: {
-      reinforcers: [],
+      reinforcers: [
+        {
+          name: "Preferred snack",
+          type: "primary",
+          effectiveness: "4",
+          notes: "Very effective when paired with praise",
+          reinforcerId: "r1",
+          reinforcerName: "Preferred snack",
+          reinforcerType: "Primary",
+        },
+        {
+          name: "Token system",
+          type: "secondary",
+          effectiveness: "3",
+          notes: "Works well for extended activities",
+          reinforcerId: "r4",
+          reinforcerName: "Token system",
+          reinforcerType: "Secondary",
+        },
+      ],
     },
     generalNotes: {
-      sessionNotes: "",
-      caregiverFeedback: "",
-      environmentalFactors: "",
-      nextSessionFocus: "",
+      sessionNotes:
+        "Overall productive session with good engagement. Client was responsive to verbal prompts and seemed to enjoy the activities.",
+      caregiverFeedback:
+        "Parent reports improvement in communication at home. Requesting additional strategies for managing behaviors during mealtimes.",
+      environmentalFactors:
+        "Session conducted in a quiet room with minimal distractions. Lighting and temperature were comfortable.",
+      nextSessionFocus:
+        "Continue work on verbal requesting skills. Introduce new social skills activities involving peers. Begin addressing mealtime behaviors.",
     },
   });
 
@@ -60,7 +139,7 @@ export default function SessionForm() {
         setCurrentStep("generalNotes");
         break;
       case "generalNotes":
-        setCurrentStep("reportGeneration");
+        setCurrentStep("reportGeneration" as unknown as FormStep);
         break;
     }
 
@@ -274,7 +353,7 @@ export default function SessionForm() {
                       Notes
                     </div>
                     <div
-                      className={`${currentStep === "reportGeneration" ? "text-indigo-600 font-medium" : ""}`}
+                      className={`${(currentStep as unknown as string) === "reportGeneration" ? "text-indigo-600 font-medium" : ""}`}
                     >
                       Report
                     </div>

@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useChat } from "@ai-sdk/react";
+import ReactMarkdown from "react-markdown";
 import { Report } from "../../../../lib/types/Report";
 import { SessionFormData } from "../../../../lib/types/SessionForm";
 
@@ -15,48 +17,93 @@ export default function ReportGeneration({
   onBack,
   onReset,
 }: ReportGenerationProps) {
-  const [report, setReport] = useState<Report | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editableMarkdown, setEditableMarkdown] = useState<string>("");
+  const [baseReport, setBaseReport] = useState<Omit<
+    Report,
+    "fullContent"
+  > | null>(null);
+  const [isGenerating, setIsGenerating] = useState(true);
 
+  // Initialize the useChat hook with the API endpoint for report generation
+  const { messages, data, status, append, isLoading, error } = useChat({
+    api: "/api/report/generate",
+    // Send the form data and RBT name
+    body: {
+      formData,
+      rbtName: "John Doe", // Mock RBT name
+    },
+    // Use data stream protocol
+    streamProtocol: "data",
+    id: `report-${formData.basicInfo.clientId}-${formData.basicInfo.sessionDate}`,
+  });
+
+  // Trigger the report generation when the component mounts
   useEffect(() => {
-    async function generateReport() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Make API call to generate report
-        const response = await fetch("/api/report/generate", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            formData: formData,
-            rbtName: "John Doe", // Mock RBT name
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to generate report");
+    const generateReport = async () => {
+      if (isGenerating) {
+        try {
+          await append({
+            role: "user",
+            content: "Generate report",
+          });
+          setIsGenerating(false);
+        } catch (err) {
+          console.error("Failed to generate report:", err);
+          setIsGenerating(false);
         }
+      }
+    };
 
-        const data = await response.json();
-        setReport(data.report);
-      } catch (err) {
-        console.error("Error generating report:", err);
-        setError("There was an error generating the report. Please try again.");
-      } finally {
-        setLoading(false);
+    generateReport();
+  }, [append, isGenerating, formData]);
+
+  // When AI data is received, extract the base report
+  useEffect(() => {
+    if (data && data.length > 0) {
+      const firstData = data[0];
+      if (
+        typeof firstData === "object" &&
+        firstData !== null &&
+        "baseReport" in firstData
+      ) {
+        setBaseReport(firstData.baseReport as Omit<Report, "fullContent">);
       }
     }
+  }, [data]);
 
-    // Call the function
-    generateReport();
-  }, [formData]);
+  // When messages are received, use the content as the markdown
+  useEffect(() => {
+    if (messages && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage && lastMessage.role === "assistant") {
+        setEditableMarkdown(lastMessage.content);
+      }
+    }
+  }, [messages]);
+
+  // Toggle between view and edit modes
+  const toggleEditMode = () => {
+    setIsEditMode(!isEditMode);
+  };
+
+  // Handle markdown content changes in edit mode
+  const handleMarkdownChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setEditableMarkdown(e.target.value);
+  };
+
+  // Manually trigger report generation
+  const handleManualGeneration = async () => {
+    setIsGenerating(true);
+  };
 
   // Show loading state
-  if (loading) {
+  if (status === "streaming" || status === "submitted" || isLoading) {
+    const previewContent =
+      messages && messages.length > 0
+        ? messages.find((msg) => msg.role === "assistant")?.content
+        : "";
+
     return (
       <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
         <div className="flex flex-col items-center justify-center py-12">
@@ -67,18 +114,29 @@ export default function ReportGeneration({
           <p className="text-gray-500 mt-2">
             Please wait while we process your session data.
           </p>
+          {previewContent && (
+            <div className="mt-6 w-full max-w-2xl bg-gray-50 p-4 rounded-lg">
+              <h4 className="font-medium text-gray-700 mb-2">Preview:</h4>
+              <div className="text-gray-600 prose">
+                <ReactMarkdown>{previewContent}</ReactMarkdown>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
   // Show error state
-  if (error) {
+  if (status === "error" || error) {
     return (
       <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
         <div className="flex flex-col items-center justify-center py-12">
           <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-6 w-full text-center">
-            <p className="font-medium">{error}</p>
+            <p className="font-medium">
+              There was an error generating the report. Please try again.
+            </p>
+            {error && <p className="text-sm mt-2">{error.message}</p>}
           </div>
           <div className="flex space-x-4">
             <button
@@ -88,7 +146,7 @@ export default function ReportGeneration({
               Go Back
             </button>
             <button
-              onClick={generateReport}
+              onClick={handleManualGeneration}
               className="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
             >
               Try Again
@@ -99,14 +157,14 @@ export default function ReportGeneration({
     );
   }
 
-  // Show report
+  // Show report view/edit
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-6 text-gray-800">
         Generated Report
       </h2>
 
-      {report && (
+      {baseReport ? (
         <div className="space-y-6">
           {/* Client Information */}
           <div className="bg-gray-50 p-4 rounded-md">
@@ -115,74 +173,51 @@ export default function ReportGeneration({
             </h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <p>
-                <span className="font-medium">Name:</span> {report.clientName}
+                <span className="font-medium">Name:</span>{" "}
+                {baseReport.clientName}
               </p>
               <p>
                 <span className="font-medium">Session Date:</span>{" "}
-                {report.sessionDate}
+                {baseReport.sessionDate}
               </p>
               <p>
                 <span className="font-medium">Duration:</span>{" "}
-                {report.sessionDuration}
+                {baseReport.sessionDuration}
               </p>
               <p>
-                <span className="font-medium">Location:</span> {report.location}
+                <span className="font-medium">Location:</span>{" "}
+                {baseReport.location}
               </p>
             </div>
           </div>
 
           {/* Report Content */}
-          <div className="space-y-4">
-            <div className="border-b pb-3">
-              <h3 className="font-semibold text-gray-800 text-lg mb-2">
-                Session Summary
+          <div className="border p-4 rounded-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold text-gray-800 text-lg">
+                Report Content
               </h3>
-              <p className="text-gray-700">{report.summary}</p>
+              <button
+                onClick={toggleEditMode}
+                className="px-4 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition text-sm"
+              >
+                {isEditMode ? "View" : "Edit"}
+              </button>
             </div>
 
-            <div className="border-b pb-3">
-              <h3 className="font-semibold text-gray-800 text-lg mb-2">
-                {report.skillAcquisition.title}
-              </h3>
-              <p className="text-gray-700">{report.skillAcquisition.content}</p>
-            </div>
-
-            <div className="border-b pb-3">
-              <h3 className="font-semibold text-gray-800 text-lg mb-2">
-                {report.behaviorManagement.title}
-              </h3>
-              <p className="text-gray-700">
-                {report.behaviorManagement.content}
-              </p>
-            </div>
-
-            <div className="border-b pb-3">
-              <h3 className="font-semibold text-gray-800 text-lg mb-2">
-                {report.reinforcement.title}
-              </h3>
-              <p className="text-gray-700">{report.reinforcement.content}</p>
-            </div>
-
-            <div className="border-b pb-3">
-              <h3 className="font-semibold text-gray-800 text-lg mb-2">
-                {report.observations.title}
-              </h3>
-              <p className="text-gray-700">{report.observations.content}</p>
-            </div>
-
-            <div className="border-b pb-3">
-              <h3 className="font-semibold text-gray-800 text-lg mb-2">
-                {report.recommendations.title}
-              </h3>
-              <p className="text-gray-700">{report.recommendations.content}</p>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-gray-800 text-lg mb-2">
-                {report.nextSteps.title}
-              </h3>
-              <p className="text-gray-700">{report.nextSteps.content}</p>
-            </div>
+            {isEditMode ? (
+              <div className="border rounded">
+                <textarea
+                  className="w-full h-[500px] p-4 border-0 rounded font-mono text-sm focus:ring-2 focus:ring-indigo-500"
+                  value={editableMarkdown}
+                  onChange={handleMarkdownChange}
+                />
+              </div>
+            ) : (
+              <div className="prose max-w-none">
+                <ReactMarkdown>{editableMarkdown}</ReactMarkdown>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}
@@ -214,44 +249,17 @@ export default function ReportGeneration({
             </div>
           </div>
         </div>
+      ) : (
+        <div className="text-center py-10">
+          <p className="text-gray-600">No report data available.</p>
+          <button
+            onClick={handleManualGeneration}
+            className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+          >
+            Generate Report
+          </button>
+        </div>
       )}
     </div>
   );
-
-  // Helper function to regenerate the report on error
-  function generateReport() {
-    setLoading(true);
-    setError(null);
-
-    // Simulate the API call again
-    setTimeout(() => {
-      fetch("/api/report/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          formData: formData,
-          rbtName: "John Doe", // Mock RBT name
-        }),
-      })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error("Failed to generate report on retry");
-          }
-          return response.json();
-        })
-        .then((data) => {
-          setReport(data.report);
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error("Error regenerating report:", err);
-          setError(
-            "There was an error generating the report. Please try again."
-          );
-          setLoading(false);
-        });
-    }, 1000);
-  }
 }
