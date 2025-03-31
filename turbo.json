@@ -20,6 +20,18 @@
       "cache": false,
       "persistent": true,
       "env": ["ANTHROPIC_API_KEY"]
+    },
+    "test": {
+      "dependsOn": ["^test"],
+      "outputs": []
+    },
+    "format:check": {
+      "dependsOn": ["^format:check"],
+      "outputs": []
+    },
+    "validate": {
+      "dependsOn": ["lint", "format:check"],
+      "outputs": []
     }
   }
 }
