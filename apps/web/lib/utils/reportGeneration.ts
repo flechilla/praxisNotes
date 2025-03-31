@@ -1,12 +1,37 @@
-import { SessionFormData } from "../types/SessionForm";
+import {
+  SessionFormData,
+  ActivityBasedSessionFormData,
+} from "../types/SessionForm";
 import { Report } from "../types/Report";
 import { getClientById } from "../mocks/clientData";
 import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 
+// Function to calculate session duration from start/end times
+const calculateSessionDuration = (
+  startTime: string,
+  endTime: string
+): string => {
+  const start = new Date(`1970-01-01T${startTime}`);
+  const end = new Date(`1970-01-01T${endTime}`);
+  const durationMs = end.getTime() - start.getTime();
+  const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
+  const durationMinutes = Math.floor(
+    (durationMs % (1000 * 60 * 60)) / (1000 * 60)
+  );
+  return `${durationHours > 0 ? `${durationHours} hour${durationHours > 1 ? "s" : ""}` : ""} ${durationMinutes} minute${durationMinutes > 1 ? "s" : ""}`.trim();
+};
+
+// Check if form data is activity-based
+const isActivityBased = (
+  formData: SessionFormData | ActivityBasedSessionFormData
+): formData is ActivityBasedSessionFormData => {
+  return "activities" in formData && "initialStatus" in formData;
+};
+
 // Function to format the form data into a prompt for the AI
 export const createReportPrompt = (
-  formData: SessionFormData,
+  formData: SessionFormData | ActivityBasedSessionFormData,
   rbtName: string
 ): string => {
   const client = getClientById(formData.basicInfo.clientId);
@@ -14,26 +39,16 @@ export const createReportPrompt = (
     throw new Error("Client not found");
   }
 
-  const {
-    basicInfo,
-    skillAcquisition,
-    behaviorTracking,
-    reinforcement,
-    generalNotes,
-  } = formData;
+  const { basicInfo, generalNotes } = formData;
 
   // Calculate session duration
-  const startTime = new Date(`1970-01-01T${basicInfo.startTime}`);
-  const endTime = new Date(`1970-01-01T${basicInfo.endTime}`);
-  const durationMs = endTime.getTime() - startTime.getTime();
-  const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
-  const durationMinutes = Math.floor(
-    (durationMs % (1000 * 60 * 60)) / (1000 * 60)
+  const sessionDuration = calculateSessionDuration(
+    basicInfo.startTime,
+    basicInfo.endTime
   );
-  const sessionDuration =
-    `${durationHours > 0 ? `${durationHours} hour${durationHours > 1 ? "s" : ""}` : ""} ${durationMinutes} minute${durationMinutes > 1 ? "s" : ""}`.trim();
 
-  return `
+  // Common header for both formats
+  let prompt = `
 You are a professional Registered Behavior Technician (RBT) writing a session report for a client. Please generate a comprehensive and professional report based on the following session data:
 
 CLIENT INFORMATION:
@@ -47,12 +62,81 @@ SESSION INFORMATION:
 - Time: ${basicInfo.startTime} to ${basicInfo.endTime} (${sessionDuration})
 - Location: ${basicInfo.location}
 - RBT: ${rbtName}
+`;
 
+  // Check which format of form data we have
+  if (isActivityBased(formData)) {
+    // Activity-based format
+    const { initialStatus, activities } = formData;
+
+    prompt += `
+CLIENT INITIAL STATUS:
+- Status on arrival: ${initialStatus.clientStatus}
+${initialStatus.caregiverReport ? `- Caregiver report: ${initialStatus.caregiverReport}` : ""}
+- Initial response: ${initialStatus.initialResponse}
+${initialStatus.medicationChanges ? `- Medication changes: ${initialStatus.medicationChanges}` : ""}
+
+ACTIVITIES:
+${activities.activities
+  .map(
+    (activity, index) => `
+Activity ${index + 1}: ${activity.name}
+- Description: ${activity.description}
+- Goal: ${activity.goal}
+- Location: ${activity.location}
+${activity.duration ? `- Duration: ${activity.duration} minutes` : ""}
+
+${
+  activity.behaviors.length > 0
+    ? `Behaviors During Activity:
+${activity.behaviors
+  .map(
+    (behavior) => `
+- Behavior: ${behavior.behaviorName}
+- Intensity: ${behavior.intensity}
+- Interventions: ${behavior.interventionUsed.join(", ")}
+${behavior.interventionNotes ? `- Notes: ${behavior.interventionNotes}` : ""}
+`
+  )
+  .join("")}`
+    : ""
+}
+
+${
+  activity.promptsUsed.length > 0
+    ? `Prompts Used:
+${activity.promptsUsed
+  .map(
+    (prompt) => `
+- ${prompt.type}: ${prompt.count} times
+`
+  )
+  .join("")}`
+    : ""
+}
+
+Completion:
+- Status: ${activity.completed ? "Completed" : "Not completed"}
+${activity.completionNotes ? `- Notes: ${activity.completionNotes}` : ""}
+
+Reinforcement:
+- Reinforcer: ${activity.reinforcement.reinforcerName}
+- Type: ${activity.reinforcement.type}
+${activity.reinforcement.notes ? `- Notes: ${activity.reinforcement.notes}` : ""}
+`
+  )
+  .join("\n")}
+`;
+  } else {
+    // Original format
+    const { skillAcquisition, behaviorTracking, reinforcement } = formData;
+
+    prompt += `
 SKILL ACQUISITION:
 ${skillAcquisition.skills
   .map(
     (skill) => `
-- Program: ${skill.programName}
+- Program: ${skill.programName || skill.program}
 - Trials: ${skill.trials} (${skill.correct} correct, ${skill.prompted} prompted, ${skill.incorrect} incorrect)
 - Prompt Level: ${skill.promptLevel}
 - Notes: ${skill.notes}
@@ -64,7 +148,7 @@ BEHAVIOR TRACKING:
 ${behaviorTracking.behaviors
   .map(
     (behavior) => `
-- Behavior: ${behavior.behaviorName}
+- Behavior: ${behavior.behaviorName || behavior.name}
 - Frequency: ${behavior.frequency} times
 ${behavior.duration ? `- Duration: ${behavior.duration} minutes` : ""}
 ${behavior.intensity ? `- Intensity: ${behavior.intensity}` : ""}
@@ -79,14 +163,18 @@ REINFORCEMENT:
 ${reinforcement.reinforcers
   .map(
     (reinforcer) => `
-- Type: ${reinforcer.reinforcerType}
-- Reinforcer: ${reinforcer.reinforcerName}
+- Type: ${reinforcer.reinforcerType || reinforcer.type}
+- Reinforcer: ${reinforcer.reinforcerName || reinforcer.name}
 - Effectiveness: ${reinforcer.effectiveness}/5
 - Notes: ${reinforcer.notes}
 `
   )
   .join("\n")}
+`;
+  }
 
+  // Common footer for both formats
+  prompt += `
 GENERAL NOTES:
 - Session Notes: ${generalNotes.sessionNotes}
 - Caregiver Feedback: ${generalNotes.caregiverFeedback}
@@ -103,14 +191,77 @@ Please generate a professional report in raw markdown format with the following 
 7. Next Steps
 
 The report should be written in a professional, clinical tone that would be appropriate for both parents and other healthcare professionals. Include specific data from the session but present it in a narrative format rather than just listing information. Incorporate professional terminology where appropriate.
-
-
 `;
+
+  return prompt;
+};
+
+// Function to parse the generated content into sections
+export const parseReportSections = (content: string) => {
+  const sections: Record<string, string> = {};
+
+  // Extract summary
+  const summaryMatch = content.match(
+    /^#\s*Summary\s*\n([\s\S]*?)(?=\n#\s|\n$)/
+  );
+  if (summaryMatch && summaryMatch[1]) {
+    sections.summary = summaryMatch[1].trim();
+  }
+
+  // Extract skill acquisition
+  const skillAcquisitionMatch = content.match(
+    /^#\s*Skill\s*Acquisition\s*\n([\s\S]*?)(?=\n#\s|\n$)/m
+  );
+  if (skillAcquisitionMatch && skillAcquisitionMatch[1]) {
+    sections.skillAcquisition = skillAcquisitionMatch[1].trim();
+  }
+
+  // Extract behavior management
+  const behaviorManagementMatch = content.match(
+    /^#\s*Behavior\s*Management\s*\n([\s\S]*?)(?=\n#\s|\n$)/m
+  );
+  if (behaviorManagementMatch && behaviorManagementMatch[1]) {
+    sections.behaviorManagement = behaviorManagementMatch[1].trim();
+  }
+
+  // Extract reinforcement
+  const reinforcementMatch = content.match(
+    /^#\s*Reinforcement\s*\n([\s\S]*?)(?=\n#\s|\n$)/m
+  );
+  if (reinforcementMatch && reinforcementMatch[1]) {
+    sections.reinforcement = reinforcementMatch[1].trim();
+  }
+
+  // Extract observations
+  const observationsMatch = content.match(
+    /^#\s*Observations\s*\n([\s\S]*?)(?=\n#\s|\n$)/m
+  );
+  if (observationsMatch && observationsMatch[1]) {
+    sections.observations = observationsMatch[1].trim();
+  }
+
+  // Extract recommendations
+  const recommendationsMatch = content.match(
+    /^#\s*Recommendations\s*\n([\s\S]*?)(?=\n#\s|\n$)/m
+  );
+  if (recommendationsMatch && recommendationsMatch[1]) {
+    sections.recommendations = recommendationsMatch[1].trim();
+  }
+
+  // Extract next steps
+  const nextStepsMatch = content.match(
+    /^#\s*Next\s*Steps\s*\n([\s\S]*?)(?=\n#\s|\n$)/m
+  );
+  if (nextStepsMatch && nextStepsMatch[1]) {
+    sections.nextSteps = nextStepsMatch[1].trim();
+  }
+
+  return sections;
 };
 
 // Function to generate a report using Anthropic's Claude
 export const generateReport = async (
-  formData: SessionFormData,
+  formData: SessionFormData | ActivityBasedSessionFormData,
   rbtName: string
 ): Promise<Report> => {
   console.log("Generating report");
@@ -137,15 +288,10 @@ export const generateReport = async (
     const sections = parseReportSections(reportContent);
 
     // Calculate session duration
-    const startTime = new Date(`1970-01-01T${formData.basicInfo.startTime}`);
-    const endTime = new Date(`1970-01-01T${formData.basicInfo.endTime}`);
-    const durationMs = endTime.getTime() - startTime.getTime();
-    const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
-    const durationMinutes = Math.floor(
-      (durationMs % (1000 * 60 * 60)) / (1000 * 60)
+    const sessionDuration = calculateSessionDuration(
+      formData.basicInfo.startTime,
+      formData.basicInfo.endTime
     );
-    const sessionDuration =
-      `${durationHours > 0 ? `${durationHours} hour${durationHours > 1 ? "s" : ""}` : ""} ${durationMinutes} minute${durationMinutes > 1 ? "s" : ""}`.trim();
 
     return {
       clientName: `${client.firstName} ${client.lastName}`,
@@ -191,62 +337,4 @@ export const generateReport = async (
       "Failed to generate report using AI. Please try again later."
     );
   }
-};
-
-// Helper function to parse the generated content into sections
-const parseReportSections = (content: string) => {
-  const sections: Record<string, string> = {
-    summary: "",
-    skillAcquisition: "",
-    behaviorManagement: "",
-    reinforcement: "",
-    observations: "",
-    recommendations: "",
-    nextSteps: "",
-  };
-
-  // Define patterns to match each section
-  const sectionPatterns = [
-    {
-      key: "summary",
-      pattern:
-        /(?:summary|session\s+summary)(?::|:?\s*?\n)([\s\S]*?)(?=\n\s*?(?:skill|behavior|reinforcement|observation|recommendation|next|$))/i,
-    },
-    {
-      key: "skillAcquisition",
-      pattern:
-        /skill\s+acquisition(?::|:?\s*?\n)([\s\S]*?)(?=\n\s*?(?:behavior|reinforcement|observation|recommendation|next|$))/i,
-    },
-    {
-      key: "behaviorManagement",
-      pattern:
-        /behavior\s+management(?::|:?\s*?\n)([\s\S]*?)(?=\n\s*?(?:reinforcement|observation|recommendation|next|$))/i,
-    },
-    {
-      key: "reinforcement",
-      pattern:
-        /reinforcement(?::|:?\s*?\n)([\s\S]*?)(?=\n\s*?(?:observation|recommendation|next|$))/i,
-    },
-    {
-      key: "observations",
-      pattern:
-        /observation(?:s)?(?::|:?\s*?\n)([\s\S]*?)(?=\n\s*?(?:recommendation|next|$))/i,
-    },
-    {
-      key: "recommendations",
-      pattern:
-        /recommendation(?:s)?(?::|:?\s*?\n)([\s\S]*?)(?=\n\s*?(?:next|$))/i,
-    },
-    { key: "nextSteps", pattern: /next\s+steps(?::|:?\s*?\n)([\s\S]*?)(?=$)/i },
-  ];
-
-  // Extract each section
-  sectionPatterns.forEach(({ key, pattern }) => {
-    const match = content.match(pattern);
-    if (match && match[1]) {
-      sections[key] = match[1].trim();
-    }
-  });
-
-  return sections;
 };

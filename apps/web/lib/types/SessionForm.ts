@@ -75,6 +75,54 @@ export type GeneralNotesFormData = {
   nextSessionFocus: string;
 };
 
+// New types for activity-based tracking
+export type ActivityBehavior = {
+  behaviorId?: string;
+  behaviorName: string;
+  definition?: string;
+  intensity: string;
+  interventionUsed: string[];
+  interventionNotes?: string;
+};
+
+export type ActivityPrompt = {
+  type: string; // "verbal", "gestural", "physical", etc.
+  count: number;
+};
+
+export type ActivityReinforcement = {
+  reinforcerId?: string;
+  reinforcerName: string;
+  type: string;
+  notes?: string;
+};
+
+export type Activity = {
+  id?: string;
+  name: string;
+  description: string;
+  goal: string;
+  location: string;
+  duration?: number;
+  behaviors: ActivityBehavior[];
+  promptsUsed: ActivityPrompt[];
+  completed: boolean;
+  completionNotes?: string;
+  reinforcement: ActivityReinforcement;
+};
+
+export type InitialStatusFormData = {
+  clientStatus: string;
+  caregiverReport: string;
+  initialResponse: string;
+  medicationChanges: string;
+};
+
+export type ActivitiesFormData = {
+  activities: Activity[];
+};
+
+// Original SessionFormData (keep for backward compatibility)
 export type SessionFormData = {
   basicInfo: BasicInfoFormData;
   skillAcquisition: SkillAcquisitionFormData;
@@ -83,10 +131,27 @@ export type SessionFormData = {
   generalNotes: GeneralNotesFormData;
 };
 
+// New SessionFormData for activity-based tracking
+export type ActivityBasedSessionFormData = {
+  basicInfo: BasicInfoFormData;
+  initialStatus: InitialStatusFormData;
+  activities: ActivitiesFormData;
+  generalNotes: GeneralNotesFormData;
+};
+
+// Original FormStep (keep for backward compatibility)
 export type FormStep =
   | "basicInfo"
   | "skillAcquisition"
   | "behaviorTracking"
   | "reinforcement"
+  | "generalNotes"
+  | "reportGeneration";
+
+// New FormStep for activity-based tracking
+export type ActivityBasedFormStep =
+  | "basicInfo"
+  | "initialStatus"
+  | "activities"
   | "generalNotes"
   | "reportGeneration";
