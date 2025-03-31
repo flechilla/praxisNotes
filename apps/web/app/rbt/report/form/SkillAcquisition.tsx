@@ -7,11 +7,13 @@ import {
 } from "../../../../lib/types/SessionForm";
 import { promptLevelOptions } from "../../constants/formOptions";
 import {
-  getSkillPrograms,
-  getTargetsByProgramId,
   SkillProgramOption,
   SkillTargetOption,
 } from "../../../../lib/mocks/skillsData";
+import {
+  fetchSkillPrograms,
+  fetchTargetsByProgramId,
+} from "../../../../lib/api/skillsApi";
 import LoadingSpinner from "../../../../components/ui/LoadingSpinner";
 
 type SkillAcquisitionProps = {
@@ -54,16 +56,19 @@ export default function SkillAcquisition({
   const [loadingPrograms, setLoadingPrograms] = useState(false);
   const [loadingTargets, setLoadingTargets] = useState(false);
   const [selectedProgram, setSelectedProgram] = useState<string>("");
+  const [apiError, setApiError] = useState<string | null>(null);
 
   // Fetch skill programs on component mount
   useEffect(() => {
     const fetchPrograms = async () => {
       setLoadingPrograms(true);
+      setApiError(null);
       try {
-        const programsData = await getSkillPrograms();
+        const programsData = await fetchSkillPrograms();
         setPrograms(programsData);
       } catch (error) {
         console.error("Error fetching programs:", error);
+        setApiError("Failed to load programs. Please try again.");
       } finally {
         setLoadingPrograms(false);
       }
@@ -81,11 +86,13 @@ export default function SkillAcquisition({
       }
 
       setLoadingTargets(true);
+      setApiError(null);
       try {
-        const targetsData = await getTargetsByProgramId(selectedProgram);
+        const targetsData = await fetchTargetsByProgramId(selectedProgram);
         setTargetSkills(targetsData);
       } catch (error) {
         console.error("Error fetching target skills:", error);
+        setApiError("Failed to load target skills. Please try again.");
       } finally {
         setLoadingTargets(false);
       }
@@ -234,6 +241,55 @@ export default function SkillAcquisition({
       <h2 className="text-2xl font-bold mb-6 text-gray-800">
         Skill Acquisition Data
       </h2>
+
+      {apiError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md">
+          <p>{apiError}</p>
+          <button
+            onClick={() => {
+              setApiError(null);
+              // Retry loading programs
+              if (loadingPrograms) {
+                const fetchPrograms = async () => {
+                  setLoadingPrograms(true);
+                  try {
+                    const programsData = await fetchSkillPrograms();
+                    setPrograms(programsData);
+                  } catch (error) {
+                    console.error("Error fetching programs:", error);
+                    setApiError("Failed to load programs. Please try again.");
+                  } finally {
+                    setLoadingPrograms(false);
+                  }
+                };
+                fetchPrograms();
+              }
+              // Retry loading targets if a program is selected
+              if (loadingTargets && selectedProgram) {
+                const fetchTargetSkills = async () => {
+                  setLoadingTargets(true);
+                  try {
+                    const targetsData =
+                      await fetchTargetsByProgramId(selectedProgram);
+                    setTargetSkills(targetsData);
+                  } catch (error) {
+                    console.error("Error fetching target skills:", error);
+                    setApiError(
+                      "Failed to load target skills. Please try again."
+                    );
+                  } finally {
+                    setLoadingTargets(false);
+                  }
+                };
+                fetchTargetSkills();
+              }
+            }}
+            className="mt-2 text-sm underline"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <div className="mb-6">

@@ -93,7 +93,7 @@ GENERAL NOTES:
 - Environmental Factors: ${generalNotes.environmentalFactors}
 - Next Session Focus: ${generalNotes.nextSessionFocus}
 
-Please generate a professional report with the following sections:
+Please generate a professional report in raw markdown format with the following sections:
 1. Summary
 2. Skill Acquisition
 3. Behavior Management
@@ -103,6 +103,8 @@ Please generate a professional report with the following sections:
 7. Next Steps
 
 The report should be written in a professional, clinical tone that would be appropriate for both parents and other healthcare professionals. Include specific data from the session but present it in a narrative format rather than just listing information. Incorporate professional terminology where appropriate.
+
+
 `;
 };
 
@@ -123,11 +125,11 @@ export const generateReport = async (
   try {
     console.log("Generating report with Anthropic");
     const response = await generateText({
-      model: anthropic("claude-3-opus-20240229"),
+      model: anthropic("claude-3-5-sonnet-20241022"),
       prompt,
     });
     console.log("Report generated with Anthropic");
-
+    console.log("response", response.text);
     // Extract the text content from the response
     const reportContent = response.text;
 

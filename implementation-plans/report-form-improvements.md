@@ -13,16 +13,19 @@ We've already implemented:
 - Loading indicators for asynchronous data fetching
 - Improved table layouts for added items
 - Enhanced form layout and styling
+- API endpoints for skills and behaviors data
+- Client-side API modules to fetch predefined values
+- Error handling for API failures with retry functionality
 
 ## Future Improvements
 
 ### Short-term Tasks
 
-- [ ] **Replace mock data with actual API endpoints**
+- [x] **Replace mock data with actual API endpoints**
 
-  - Create API endpoints for skills and behaviors in `/api/skills` and `/api/behaviors`
-  - Modify the frontend to use these endpoints instead of mock data
-  - Add proper error handling and fallbacks
+  - ✅ Create API endpoints for skills and behaviors in `/api/skills` and `/api/behaviors`
+  - ✅ Modify the frontend to use these endpoints instead of mock data
+  - ✅ Add proper error handling and fallbacks
 
 - [ ] **Add search functionality to dropdowns**
 
@@ -77,14 +80,17 @@ We've already implemented:
 - `apps/web/app/rbt/report/form/SkillAcquisition.tsx`
 - `apps/web/app/rbt/report/form/BehaviorTracking.tsx`
 - `apps/web/lib/types/SessionForm.ts`
-- Create new API endpoints:
-  - `apps/web/app/api/skills/route.ts`
-  - `apps/web/app/api/behaviors/route.ts`
+- ✅ Create new API endpoints:
+  - ✅ `apps/web/app/api/skills/route.ts`
+  - ✅ `apps/web/app/api/behaviors/route.ts`
+- ✅ Create client-side API modules:
+  - ✅ `apps/web/lib/api/skillsApi.ts`
+  - ✅ `apps/web/lib/api/behaviorsApi.ts`
 - Database models (when implementing actual database)
 
 ## Technical Approach
 
-1. Replace the mock data functions with real API calls
+1. ✅ Replace the mock data functions with real API calls
 2. Implement proper database models for skills and behaviors
 3. Add pagination and search functionality to handle large datasets
 4. Enhance the UI components to support more complex interactions

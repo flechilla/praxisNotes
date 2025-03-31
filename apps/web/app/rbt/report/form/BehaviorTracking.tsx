@@ -6,10 +6,8 @@ import {
   Behavior,
 } from "../../../../lib/types/SessionForm";
 import { behaviorIntensityOptions } from "../../constants/formOptions";
-import {
-  getAllBehaviors,
-  BehaviorOption,
-} from "../../../../lib/mocks/behaviorsData";
+import { BehaviorOption } from "../../../../lib/mocks/behaviorsData";
+import { fetchAllBehaviors } from "../../../../lib/api/behaviorsApi";
 import LoadingSpinner from "../../../../components/ui/LoadingSpinner";
 
 type BehaviorTrackingProps = {
@@ -48,16 +46,19 @@ export default function BehaviorTracking({
   const [behaviors, setBehaviors] = useState<BehaviorOption[]>([]);
   const [loadingBehaviors, setLoadingBehaviors] = useState(false);
   const [selectedBehaviorId, setSelectedBehaviorId] = useState<string>("");
+  const [apiError, setApiError] = useState<string | null>(null);
 
   // Fetch behaviors on component mount
   useEffect(() => {
     const fetchBehaviors = async () => {
       setLoadingBehaviors(true);
+      setApiError(null);
       try {
-        const behaviorsData = await getAllBehaviors();
+        const behaviorsData = await fetchAllBehaviors();
         setBehaviors(behaviorsData);
       } catch (error) {
         console.error("Error fetching behaviors:", error);
+        setApiError("Failed to load behaviors. Please try again.");
       } finally {
         setLoadingBehaviors(false);
       }
@@ -185,6 +186,34 @@ export default function BehaviorTracking({
       <h2 className="text-2xl font-bold mb-6 text-gray-800">
         Behavior Tracking
       </h2>
+
+      {apiError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md">
+          <p>{apiError}</p>
+          <button
+            onClick={() => {
+              setApiError(null);
+              // Retry loading behaviors
+              const fetchBehaviors = async () => {
+                setLoadingBehaviors(true);
+                try {
+                  const behaviorsData = await fetchAllBehaviors();
+                  setBehaviors(behaviorsData);
+                } catch (error) {
+                  console.error("Error fetching behaviors:", error);
+                  setApiError("Failed to load behaviors. Please try again.");
+                } finally {
+                  setLoadingBehaviors(false);
+                }
+              };
+              fetchBehaviors();
+            }}
+            className="mt-2 text-sm underline"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <div className="mb-6">
