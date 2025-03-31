@@ -1,71 +1,84 @@
-# PraxisNote: RBT Daily Report Assistant
+# Turborepo starter
 
-PraxisNote is a specialized application designed to help Registered Behavior Technicians (RBTs) efficiently document and manage daily session data for clients, while facilitating input from Board Certified Behavior Analysts (BCBAs) and automatically generating comprehensive reports.
+This Turborepo starter is maintained by the Turborepo core team.
 
-## Documentation
+## Using this example
 
-### Core Documentation
+Run the following command:
 
-- [Technical Specification](docs/technical-specification.md) - Technical architecture and implementation details
-- [Database Specification](docs/database-specification.md) - Database schema and data relationships
-- [UI/UX Specification](docs/ui-ux-specification.md) - User flows and interface design
-- [Audience Definition](docs/audience-definition.md) - User personas and audience analysis
-- [Accessibility Specification](docs/accessibility-specification.md) - Accessibility requirements and guidelines
-- [RBT User Flow](docs/rbt-user-flow.md) - Detailed flow for RBT users
-- [Implementation Plan](docs/implementation-plan.md) - Step-by-step implementation plan
-
-### Original Design Document
-
-- [PraxisNote Implementation](docs/praxisnote-implementation.md) - Original implementation document
-
-## Key Features
-
-- **User Authentication** - Secure login with role-based access (RBT, BCBA, Administrator)
-- **Client Management** - Manage client profiles and therapy programs
-- **Session Reports** - Structured multi-step form for session documentation
-- **Report Generation** - AI-assisted report generation using ai-sdk
-- **Review System** - Workflow for BCBA review and feedback
-- **Dashboards** - Role-specific dashboards with relevant information
-
-## Development
-
-### Prerequisites
-
-- Node.js 18+
-- npm or yarn
-- PostgreSQL (via Supabase)
-
-### Technologies
-
-- Next.js 14+ with App Router
-- React with TypeScript
-- TailwindCSS & ShadCN UI
-- React Hook Form with Zod
-- Drizzle ORM
-- Next-Auth
-- ai-sdk for report generation
-
-### Getting Started
-
-```bash
-# Clone the repository
-git clone [repository URL]
-
-# Install dependencies
-npm install
-
-# Setup environment variables
-cp .env.example .env.local
-# Edit .env.local with your credentials
-
-# Start development server
-npm run dev
+```sh
+npx create-turbo@latest
 ```
 
-## Contributing
+## What's inside?
 
-Please see the [Implementation Plan](docs/implementation-plan.md) for details about the development roadmap. The MVP focuses on report generation from form data.
+This Turborepo includes the following packages/apps:
 
-## License
+### Apps and Packages
 
-[License details]
+- `docs`: a [Next.js](https://nextjs.org/) app
+- `web`: another [Next.js](https://nextjs.org/) app
+- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
+- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
+- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+
+Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+
+### Utilities
+
+This Turborepo has some additional tools already setup for you:
+
+- [TypeScript](https://www.typescriptlang.org/) for static type checking
+- [ESLint](https://eslint.org/) for code linting
+- [Prettier](https://prettier.io) for code formatting
+
+### Build
+
+To build all apps and packages, run the following command:
+
+```
+cd my-turborepo
+pnpm build
+```
+
+### Develop
+
+To develop all apps and packages, run the following command:
+
+```
+cd my-turborepo
+pnpm dev
+```
+
+### Remote Caching
+
+> [!TIP]
+> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+
+Turborepo can use a technique known as [Remote Caching](https://turbo.build/repo/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+
+By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+
+```
+cd my-turborepo
+npx turbo login
+```
+
+This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+
+Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+
+```
+npx turbo link
+```
+
+## Useful Links
+
+Learn more about the power of Turborepo:
+
+- [Tasks](https://turbo.build/repo/docs/core-concepts/monorepos/running-tasks)
+- [Caching](https://turbo.build/repo/docs/core-concepts/caching)
+- [Remote Caching](https://turbo.build/repo/docs/core-concepts/remote-caching)
+- [Filtering](https://turbo.build/repo/docs/core-concepts/monorepos/filtering)
+- [Configuration Options](https://turbo.build/repo/docs/reference/configuration)
+- [CLI Usage](https://turbo.build/repo/docs/reference/command-line-reference)
