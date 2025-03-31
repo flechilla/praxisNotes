@@ -13,6 +13,7 @@ PraxisNote is a specialized application designed to help Registered Behavior Tec
 - [Accessibility Specification](docs/accessibility-specification.md) - Accessibility requirements and guidelines
 - [RBT User Flow](docs/rbt-user-flow.md) - Detailed flow for RBT users
 - [Implementation Plan](docs/implementation-plan.md) - Step-by-step implementation plan
+- [AI-SDK with Anthropic Integration](docs/ai-sdk-anthropic-integration.md) - Integration details for AI-assisted report generation
 
 ### Original Design Document
 
@@ -23,7 +24,7 @@ PraxisNote is a specialized application designed to help Registered Behavior Tec
 - **User Authentication** - Secure login with role-based access (RBT, BCBA, Administrator)
 - **Client Management** - Manage client profiles and therapy programs
 - **Session Reports** - Structured multi-step form for session documentation
-- **Report Generation** - AI-assisted report generation using ai-sdk
+- **Report Generation** - AI-assisted report generation using ai-sdk with Anthropic models
 - **Review System** - Workflow for BCBA review and feedback
 - **Dashboards** - Role-specific dashboards with relevant information
 
@@ -43,7 +44,7 @@ PraxisNote is a specialized application designed to help Registered Behavior Tec
 - React Hook Form with Zod
 - Drizzle ORM
 - Next-Auth
-- ai-sdk for report generation
+- ai-sdk with Anthropic for report generation
 
 ### Getting Started
 
