@@ -1,14 +1,57 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { mockClients } from "../../lib/mocks/clientData";
-import { ClientInfo } from "../../lib/types/SessionForm";
+import { DBClient } from "../../lib/types/Client";
 
 export default function RBTDashboard() {
+  const [clients, setClients] = useState<DBClient[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchClients() {
+      try {
+        const response = await fetch("/api/clients");
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch clients");
+        }
+
+        const data = await response.json();
+        // Transform date strings to Date objects
+        const clientsWithDates = data.map((client: any) => ({
+          ...client,
+          createdAt: new Date(client.createdAt),
+          updatedAt: new Date(client.updatedAt),
+        }));
+
+        setClients(clientsWithDates);
+      } catch (err) {
+        setError("Error loading clients");
+        console.error("Error fetching clients:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchClients();
+  }, []);
+
   const today = new Date().toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+
+  // Format date for display
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -75,25 +118,35 @@ export default function RBTDashboard() {
             Recent Clients
           </h2>
           <div className="space-y-3">
-            {mockClients.slice(0, 3).map((client: ClientInfo) => (
-              <div
-                key={client.id}
-                className="flex justify-between items-center"
-              >
-                <div>
-                  <p className="font-medium text-gray-800">
-                    {client.firstName} {client.lastName}
-                  </p>
-                  <p className="text-sm text-gray-500">{client.diagnosis}</p>
-                </div>
-                <Link
-                  href={`/rbt/report?clientId=${client.id}`}
-                  className="text-indigo-600 hover:text-indigo-800 text-sm"
-                >
-                  Create Report
-                </Link>
+            {loading ? (
+              <div className="flex justify-center items-center h-20">
+                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-indigo-600"></div>
               </div>
-            ))}
+            ) : error ? (
+              <div className="text-center text-red-500">{error}</div>
+            ) : clients.length === 0 ? (
+              <div className="text-center text-gray-500">No clients found</div>
+            ) : (
+              clients.slice(0, 3).map((client) => (
+                <div
+                  key={client.id}
+                  className="flex justify-between items-center"
+                >
+                  <div>
+                    <p className="font-medium text-gray-800">{client.name}</p>
+                    <p className="text-sm text-gray-500">
+                      Added: {formatDate(client.createdAt)}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/rbt/report?clientId=${client.id}`}
+                    className="text-indigo-600 hover:text-indigo-800 text-sm"
+                  >
+                    Create Report
+                  </Link>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

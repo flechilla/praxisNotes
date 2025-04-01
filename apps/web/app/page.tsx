@@ -1,24 +1,41 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { mockClients } from "../lib/mocks/clientData";
+import { useEffect, useState } from "react";
+import { ClientService } from "../lib/services/client.service";
+import { DBClient } from "../lib/types/Client";
 
 export default function Dashboard() {
+  const [clients, setClients] = useState<DBClient[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
+  useEffect(() => {
+    async function fetchClients() {
+      try {
+        const data = await ClientService.getAllClients();
+        setClients(data);
+      } catch (error) {
+        console.error("Error fetching clients:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchClients();
+  }, []);
+
   // Filter clients based on search query
-  const filteredClients = mockClients.filter(
+  const filteredClients = clients.filter(
     (client) =>
-      (client.firstName + " " + client.lastName)
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      client.diagnosis.toLowerCase().includes(searchQuery.toLowerCase())
+      client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (client.notes &&
+        client.notes.toLowerCase().includes(searchQuery.toLowerCase())),
   );
 
   // Mock data for quick stats
   const stats = [
-    { label: "Active Clients", value: mockClients.length },
+    { label: "Active Clients", value: clients.length },
     { label: "Recent Sessions", value: 12 },
     { label: "Draft Reports", value: 3 },
     { label: "Completed Reports", value: 8 },
@@ -45,6 +62,15 @@ export default function Dashboard() {
       location: "School",
     },
   ];
+
+  // Format date for display
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -248,82 +274,87 @@ export default function Dashboard() {
               <input
                 type="text"
                 placeholder="Search clients..."
-                className="border rounded-md py-2 px-3 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
           </div>
 
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            <ul className="divide-y divide-gray-200">
-              {filteredClients.map((client) => (
-                <li key={client.id}>
-                  <div className="px-4 py-4 sm:px-6 hover:bg-gray-50 cursor-pointer">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-indigo-600 truncate">
-                        {client.firstName} {client.lastName}
-                      </p>
-                      <div className="ml-2 flex-shrink-0 flex">
-                        <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                          {client.diagnosis}
+          {loading ? (
+            <div className="flex justify-center py-10">
+              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-500"></div>
+            </div>
+          ) : filteredClients.length === 0 ? (
+            <div className="bg-white shadow overflow-hidden sm:rounded-md p-6 text-center text-gray-500">
+              No clients found.
+            </div>
+          ) : (
+            <div className="bg-white shadow overflow-hidden sm:rounded-md">
+              <ul className="divide-y divide-gray-200">
+                {filteredClients.map((client) => (
+                  <li key={client.id}>
+                    <div className="px-4 py-4 sm:px-6 hover:bg-gray-50 cursor-pointer">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-indigo-600 truncate">
+                          {client.name}
                         </p>
+                        <div className="ml-2 flex-shrink-0 flex">
+                          <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                            {client.notes || "No details"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-2 sm:flex sm:justify-between">
+                        <div className="sm:flex">
+                          <p className="flex items-center text-sm text-gray-500">
+                            <svg
+                              className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                              />
+                            </svg>
+                            Added: {formatDate(client.createdAt)}
+                          </p>
+                          <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
+                            <svg
+                              className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                              />
+                            </svg>
+                            {client.email || "No email"}
+                          </p>
+                        </div>
+                        <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
+                          <Link
+                            href={`/rbt/report?clientId=${client.id}`}
+                            className="text-indigo-600 hover:text-indigo-900"
+                          >
+                            Create Report
+                          </Link>
+                        </div>
                       </div>
                     </div>
-                    <div className="mt-2 sm:flex sm:justify-between">
-                      <div className="sm:flex">
-                        <p className="flex items-center text-sm text-gray-500">
-                          <svg
-                            className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                            />
-                          </svg>
-                          Guardian: {client.guardian}
-                        </p>
-                        <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
-                          <svg
-                            className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                          Provider: {client.provider}
-                        </p>
-                      </div>
-                      <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                        <Link
-                          href={`/rbt/report?clientId=${client.id}`}
-                          className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-5 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:border-indigo-700 focus:shadow-outline-indigo active:bg-indigo-700 transition ease-in-out duration-150"
-                        >
-                          New Session
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-              ))}
-              {filteredClients.length === 0 && (
-                <li className="px-4 py-8 text-center text-gray-500">
-                  No clients found matching your search.
-                </li>
-              )}
-            </ul>
-          </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
     </main>

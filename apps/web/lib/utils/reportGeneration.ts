@@ -3,7 +3,6 @@ import {
   ActivityBasedSessionFormData,
 } from "../types/SessionForm";
 import { Report } from "../types/Report";
-import { getClientById } from "../mocks/clientData";
 import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 import {
@@ -14,21 +13,21 @@ import {
 // Function to calculate session duration from start/end times
 const calculateSessionDuration = (
   startTime: string,
-  endTime: string
+  endTime: string,
 ): string => {
   const start = new Date(`1970-01-01T${startTime}`);
   const end = new Date(`1970-01-01T${endTime}`);
   const durationMs = end.getTime() - start.getTime();
   const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
   const durationMinutes = Math.floor(
-    (durationMs % (1000 * 60 * 60)) / (1000 * 60)
+    (durationMs % (1000 * 60 * 60)) / (1000 * 60),
   );
   return `${durationHours > 0 ? `${durationHours} hour${durationHours > 1 ? "s" : ""}` : ""} ${durationMinutes} minute${durationMinutes > 1 ? "s" : ""}`.trim();
 };
 
 // Check if form data is activity-based
 const isActivityBased = (
-  formData: SessionFormData | ActivityBasedSessionFormData
+  formData: SessionFormData | ActivityBasedSessionFormData,
 ): formData is ActivityBasedSessionFormData => {
   return "activities" in formData && "initialStatus" in formData;
 };
@@ -36,10 +35,10 @@ const isActivityBased = (
 // Function to generate a report using Anthropic's Claude
 export const generateReport = async (
   formData: SessionFormData | ActivityBasedSessionFormData,
-  rbtName: string
+  rbtName: string,
 ): Promise<Report> => {
-  console.log("Generating report");
-  const client = getClientById(formData.basicInfo.clientId);
+  console.log(`Generating report for ${formData.basicInfo.clientId}`);
+  const client = await getClientById(formData.basicInfo.clientId);
   if (!client) {
     throw new Error("Client not found");
   }
@@ -48,7 +47,7 @@ export const generateReport = async (
   // Calculate session duration
   const sessionDuration = calculateSessionDuration(
     formData.basicInfo.startTime,
-    formData.basicInfo.endTime
+    formData.basicInfo.endTime,
   );
 
   // Choose the appropriate prompt template based on the form data type
@@ -58,14 +57,14 @@ export const generateReport = async (
       formData,
       client,
       rbtName,
-      sessionDuration
+      sessionDuration,
     );
   } else {
     prompt = createLegacyReportPrompt(
       formData,
       client,
       rbtName,
-      sessionDuration
+      sessionDuration,
     );
   }
 
@@ -162,7 +161,7 @@ export const generateReport = async (
   } catch (error) {
     console.error("Error generating report:", error);
     throw new Error(
-      "Failed to generate report using AI. Please try again later."
+      "Failed to generate report using AI. Please try again later.",
     );
   }
 };
@@ -173,7 +172,7 @@ export const parseReportSections = (content: string) => {
 
   // Extract summary
   const summaryMatch = content.match(
-    /^#\s*Summary\s*\n([\s\S]*?)(?=\n#\s|\n$)/
+    /^#\s*Summary\s*\n([\s\S]*?)(?=\n#\s|\n$)/,
   );
   if (summaryMatch && summaryMatch[1]) {
     sections.summary = summaryMatch[1].trim();
@@ -181,7 +180,7 @@ export const parseReportSections = (content: string) => {
 
   // Extract skill acquisition
   const skillAcquisitionMatch = content.match(
-    /^#\s*Skill\s*Acquisition\s*\n([\s\S]*?)(?=\n#\s|\n$)/m
+    /^#\s*Skill\s*Acquisition\s*\n([\s\S]*?)(?=\n#\s|\n$)/m,
   );
   if (skillAcquisitionMatch && skillAcquisitionMatch[1]) {
     sections.skillAcquisition = skillAcquisitionMatch[1].trim();
@@ -189,7 +188,7 @@ export const parseReportSections = (content: string) => {
 
   // Extract behavior management
   const behaviorManagementMatch = content.match(
-    /^#\s*Behavior\s*Management\s*\n([\s\S]*?)(?=\n#\s|\n$)/m
+    /^#\s*Behavior\s*Management\s*\n([\s\S]*?)(?=\n#\s|\n$)/m,
   );
   if (behaviorManagementMatch && behaviorManagementMatch[1]) {
     sections.behaviorManagement = behaviorManagementMatch[1].trim();
@@ -197,7 +196,7 @@ export const parseReportSections = (content: string) => {
 
   // Extract reinforcement
   const reinforcementMatch = content.match(
-    /^#\s*Reinforcement\s*\n([\s\S]*?)(?=\n#\s|\n$)/m
+    /^#\s*Reinforcement\s*\n([\s\S]*?)(?=\n#\s|\n$)/m,
   );
   if (reinforcementMatch && reinforcementMatch[1]) {
     sections.reinforcement = reinforcementMatch[1].trim();
@@ -205,7 +204,7 @@ export const parseReportSections = (content: string) => {
 
   // Extract observations
   const observationsMatch = content.match(
-    /^#\s*Observations\s*\n([\s\S]*?)(?=\n#\s|\n$)/m
+    /^#\s*Observations\s*\n([\s\S]*?)(?=\n#\s|\n$)/m,
   );
   if (observationsMatch && observationsMatch[1]) {
     sections.observations = observationsMatch[1].trim();
@@ -213,7 +212,7 @@ export const parseReportSections = (content: string) => {
 
   // Extract recommendations
   const recommendationsMatch = content.match(
-    /^#\s*Recommendations\s*\n([\s\S]*?)(?=\n#\s|\n$)/m
+    /^#\s*Recommendations\s*\n([\s\S]*?)(?=\n#\s|\n$)/m,
   );
   if (recommendationsMatch && recommendationsMatch[1]) {
     sections.recommendations = recommendationsMatch[1].trim();
@@ -221,7 +220,7 @@ export const parseReportSections = (content: string) => {
 
   // Extract next steps
   const nextStepsMatch = content.match(
-    /^#\s*Next\s*Steps\s*\n([\s\S]*?)(?=\n#\s|\n$)/m
+    /^#\s*Next\s*Steps\s*\n([\s\S]*?)(?=\n#\s|\n$)/m,
   );
   if (nextStepsMatch && nextStepsMatch[1]) {
     sections.nextSteps = nextStepsMatch[1].trim();

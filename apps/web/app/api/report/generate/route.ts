@@ -5,16 +5,18 @@ import {
   ActivityBasedSessionFormData,
 } from "../../../../lib/types/SessionForm";
 import { anthropic } from "@ai-sdk/anthropic";
-import { streamText, createDataStreamResponse } from "ai";
+import { streamText, generateText, createDataStreamResponse } from "ai";
 import {
   createNarrativeReportPrompt,
   createLegacyReportPrompt,
 } from "../../../../lib/prompts/sessionReport";
-import { getClientById } from "../../../../lib/mocks/clientData";
+import { ClientService } from "../../../../lib/services/client.service";
+import { SessionService } from "../../../../lib/services/session.service";
+import { ReportService } from "../../../../lib/services/report.service";
 
 // Function to check if form data is activity-based
 const isActivityBased = (
-  formData: SessionFormData | ActivityBasedSessionFormData
+  formData: SessionFormData | ActivityBasedSessionFormData,
 ): formData is ActivityBasedSessionFormData => {
   return "activities" in formData && "initialStatus" in formData;
 };
@@ -22,14 +24,14 @@ const isActivityBased = (
 // Function to calculate session duration
 const calculateSessionDuration = (
   startTime: string,
-  endTime: string
+  endTime: string,
 ): string => {
   const start = new Date(`1970-01-01T${startTime}`);
   const end = new Date(`1970-01-01T${endTime}`);
   const durationMs = end.getTime() - start.getTime();
   const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
   const durationMinutes = Math.floor(
-    (durationMs % (1000 * 60 * 60)) / (1000 * 60)
+    (durationMs % (1000 * 60 * 60)) / (1000 * 60),
   );
   return `${durationHours > 0 ? `${durationHours} hour${durationHours > 1 ? "s" : ""}` : ""} ${durationMinutes} minute${durationMinutes > 1 ? "s" : ""}`.trim();
 };
@@ -39,6 +41,7 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body = await request.json();
+    console.log("Request body:", body);
     const {
       formData,
       rbtName,
@@ -49,12 +52,17 @@ export async function POST(request: NextRequest) {
       isActivityBased?: boolean;
     };
 
+    const userId = "7a3de2f7-5ff7-49d1-9b93-a5101dcc7fc4";
+
     // Validate required fields
     if (!formData || !rbtName) {
       console.error("Report generation failed: Missing required fields");
       return NextResponse.json(
-        { error: "Missing required fields: formData and rbtName are required" },
-        { status: 400 }
+        {
+          error:
+            "Missing required fields: formData, rbtName, and userId are required",
+        },
+        { status: 400 },
       );
     }
 
@@ -73,7 +81,7 @@ export async function POST(request: NextRequest) {
         console.error("Report generation failed: Incomplete form data");
         return NextResponse.json(
           { error: "Incomplete form data: all sections are required" },
-          { status: 400 }
+          { status: 400 },
         );
       }
     } else {
@@ -88,16 +96,17 @@ export async function POST(request: NextRequest) {
         console.error("Report generation failed: Incomplete form data");
         return NextResponse.json(
           { error: "Incomplete form data: all sections are required" },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
 
-    // Get client information
-    const client = getClientById(formData.basicInfo.clientId);
+    // Get client information from the database
+    const clientId = formData.basicInfo.clientId;
+    const client = await ClientService.getClientInfoById(clientId);
     if (!client) {
       console.error(
-        `Report generation failed: Client not found (ID: ${formData.basicInfo.clientId})`
+        `Report generation failed: Client not found (ID: ${clientId})`,
       );
       return NextResponse.json({ error: "Client not found" }, { status: 400 });
     }
@@ -105,8 +114,19 @@ export async function POST(request: NextRequest) {
     // Calculate session duration
     const sessionDuration = calculateSessionDuration(
       formData.basicInfo.startTime,
-      formData.basicInfo.endTime
+      formData.basicInfo.endTime,
     );
+
+    // Save session to database
+    const session = await SessionService.createSession(formData, userId);
+    if (!session) {
+      console.error("Report generation failed: Session not created");
+      return NextResponse.json(
+        { error: "Session not created" },
+        { status: 400 },
+      );
+    }
+    console.log(`Created session with ID: ${session.id}`);
 
     // Create prompt for AI based on form type
     let prompt: string;
@@ -115,14 +135,14 @@ export async function POST(request: NextRequest) {
         formData as ActivityBasedSessionFormData,
         client,
         rbtName,
-        sessionDuration
+        sessionDuration,
       );
     } else {
       prompt = createLegacyReportPrompt(
         formData as SessionFormData,
         client,
         rbtName,
-        sessionDuration
+        sessionDuration,
       );
     }
 
@@ -163,22 +183,36 @@ export async function POST(request: NextRequest) {
     };
 
     console.log(
-      `Starting report generation for client: ${client.firstName} ${client.lastName}`
+      `Starting report generation for client: ${client.firstName} ${client.lastName}`,
     );
 
-    // Return the data stream response
+    // Return the data stream response with the full report
     return createDataStreamResponse({
       execute: (dataStream) => {
-        // Send base report to the client
+        // Send base report structure to the client
         dataStream.writeData({ baseReport });
 
-        // Generate the report
         const result = streamText({
           model: anthropic("claude-3-5-sonnet-20241022"),
           prompt,
+          onFinish: async (result) => {
+            // Initialize the complete report with the generated content
+            const completeReport: Report = {
+              ...baseReport,
+              fullContent: result.text,
+            };
+
+            // Save the report to the database
+            const savedReport = await ReportService.createReport(
+              session.id,
+              userId,
+              clientId,
+              completeReport,
+            );
+            console.log(`Saved report with ID: ${savedReport.id}`);
+          },
         });
 
-        // Merge the result into the data stream
         result.mergeIntoDataStream(dataStream);
       },
       onError: (error) => {
@@ -195,7 +229,7 @@ export async function POST(request: NextRequest) {
             ? error.message
             : "An unexpected error occurred",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
