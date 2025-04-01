@@ -1,5 +1,5 @@
 {
-  "name": "@repo/database",
+  "name": "@praxisnotes/database",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -28,8 +28,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.23.0",
-    "@repo/eslint-config": "*",
-    "@repo/typescript-config": "*",
+    "@praxisnotes/eslint-config": "*",
+    "@praxisnotes/typescript-config": "*",
     "drizzle-kit": "^0.30.6",
     "eslint": "^9.23.0",
     "rimraf": "^5.0.5",

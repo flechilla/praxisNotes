@@ -16,9 +16,7 @@ import GeneralNotes from "./form/GeneralNotes";
 import ReportGeneration from "./form/ReportGeneration";
 import InitialStatus from "./form/InitialStatus";
 import Activities from "./form/Activities";
-import { mockClients } from "../../../lib/mocks/clientData";
 import { generateReport } from "../../../lib/utils/reportGeneration";
-import Link from "next/link";
 
 // Feature flag for using the new activity-based flow
 const USE_ACTIVITY_BASED_FLOW = true;
@@ -488,7 +486,7 @@ export default function SessionForm() {
 
   // Update specific sections of the form data - Activity-Based Flow
   const updateInitialStatus = (
-    data: typeof activityBasedFormData.initialStatus
+    data: typeof activityBasedFormData.initialStatus,
   ) => {
     setActivityBasedFormData((prev) => ({ ...prev, initialStatus: data }));
   };

@@ -1,5 +1,5 @@
 {
-  "name": "@repo/ui",
+  "name": "@praxisnotes/ui",
   "version": "0.0.0",
   "sideEffects": [
     "**/*.css"
@@ -22,9 +22,9 @@
     "react": "^19"
   },
   "devDependencies": {
-    "@repo/eslint-config": "*",
-    "@repo/tailwind-config": "*",
-    "@repo/typescript-config": "*",
+    "@praxisnotes/eslint-config": "*",
+    "@praxisnotes/tailwind-config": "*",
+    "@praxisnotes/typescript-config": "*",
     "@types/react": "^19.0.12",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.23.0",
