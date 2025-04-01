@@ -18,3 +18,34 @@ export * from "./generate/generate.type";
 // Common types
 export * from "./common/response.type";
 export * from "./common/error.type";
+export * from "./common/api.type";
+export * from "./common/form.type";
+
+// Client types
+export * from "./client/client.type";
+
+// Reinforcement types
+export * from "./reinforcement/reinforcement.type";
+
+// Activity types - use explicit import to avoid naming conflicts
+export type {
+  Activity,
+  ActivityWithRelations,
+  NewActivity,
+  UpdateActivity,
+  ActivitiesFormData,
+  ActivityBehavior,
+  ActivityBehaviorForm,
+  NewActivityBehavior,
+  UpdateActivityBehavior,
+  ActivityPrompt,
+  ActivityPromptForm,
+  NewActivityPrompt,
+  UpdateActivityPrompt,
+  ActivityReinforcement,
+  ActivityReinforcementForm,
+  NewActivityReinforcement,
+  UpdateActivityReinforcement,
+  PromptType,
+  ActivityForm,
+} from "./activity";

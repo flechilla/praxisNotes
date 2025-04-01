@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Report } from "../../../../lib/types/Report";
+import { Report } from "@praxisnotes/types/src/Report";
 import {
   SessionFormData,
   ActivityBasedSessionFormData,
-} from "../../../../lib/types/SessionForm";
+} from "@praxisnotes/types/src/SessionForm";
 import { anthropic } from "@ai-sdk/anthropic";
 import { streamText, generateText, createDataStreamResponse } from "ai";
 import {

@@ -1,16 +1,25 @@
-import { ClientInfo } from "../types/SessionForm";
+import { ClientInfo } from "@praxisnotes/types/src/SessionForm";
 import { DBClient } from "../types/Client";
 import {
   adaptDBClientToClientInfo,
   adaptDBClientsToClientInfo,
 } from "../adapters/client.adapter";
+import { Client } from "@praxisnotes/types";
 
 // Server-side imports - only used in API routes
-let db: any;
-let clients: any;
-let eq: any;
-let desc: any;
-let withDb: any;
+// Define types for server-side imports
+type DrizzleClient = any; // Proper type will be inferred at runtime
+type ClientSchema = any; // Proper type will be inferred at runtime
+type OperatorEquality = (column: any, value: any) => any;
+type OperatorOrder = (column: any) => any;
+type DrizzleCallback = <T>(callback: () => Promise<T>) => Promise<T>;
+
+// Default to undefined for client-side
+let db: DrizzleClient;
+let clients: ClientSchema;
+let eq: OperatorEquality;
+let desc: OperatorOrder;
+let withDb: DrizzleCallback;
 
 // Only import database modules on the server
 if (typeof window === "undefined") {
@@ -58,7 +67,7 @@ export class ClientService {
       }
 
       const data = await response.json();
-      return data.map((client: any) => ({
+      return data.map((client: Client) => ({
         ...client,
         createdAt: new Date(client.createdAt),
         updatedAt: new Date(client.updatedAt),

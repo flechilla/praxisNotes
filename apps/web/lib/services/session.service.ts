@@ -4,7 +4,7 @@ import { insertSessionSchema } from "@praxisnotes/database";
 import {
   SessionFormData,
   ActivityBasedSessionFormData,
-} from "../types/SessionForm";
+} from "@praxisnotes/types/src/SessionForm";
 import { eq } from "drizzle-orm";
 
 /**

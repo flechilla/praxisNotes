@@ -1,7 +1,7 @@
 import { db, withDb } from "../db";
 import { reports, reportSections } from "@praxisnotes/database";
 import { insertReportSchema } from "@praxisnotes/database";
-import { Report, ReportSection } from "../types/Report";
+import { Report, ReportSection } from "@praxisnotes/types/src/Report";
 import { eq } from "drizzle-orm";
 
 /**

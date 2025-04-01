@@ -1,4 +1,5 @@
 import { BehaviorOption } from "../mocks/behaviorsData";
+import { BehaviorOption as SharedBehaviorOption } from "@praxisnotes/types";
 
 /**
  * Fetches all behaviors
@@ -17,7 +18,7 @@ export const fetchAllBehaviors = async (): Promise<BehaviorOption[]> => {
       throw new Error("Invalid response format from behaviors API");
     }
 
-    return data.behaviors.map((behavior: any) => ({
+    return data.behaviors.map((behavior: SharedBehaviorOption) => ({
       id: behavior.id,
       name: behavior.name,
       definition: behavior.definition,

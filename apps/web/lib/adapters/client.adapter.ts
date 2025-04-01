@@ -1,5 +1,5 @@
 import { DBClient } from "../types/Client";
-import { ClientInfo } from "../types/SessionForm";
+import { ClientInfo } from "@praxisnotes/types/src/SessionForm";
 
 /**
  * Adapts a database client to the ClientInfo format used by forms

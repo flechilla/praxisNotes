@@ -6,7 +6,7 @@ import {
   ActivityBehavior,
   ActivityPrompt,
   ActivityReinforcement,
-} from "../../../../lib/types/SessionForm";
+} from "@praxisnotes/types/src/SessionForm";
 import {
   activityLocationOptions,
   promptTypeOptions,

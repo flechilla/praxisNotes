@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { BasicInfoFormData } from "../../../../lib/types/SessionForm";
+import { BasicInfoFormData } from "@praxisnotes/types/src/SessionForm";
 import { locationOptions } from "../../constants/formOptions";
 import { ClientService } from "../../../../lib/services/client.service";
-import { ClientInfo } from "../../../../lib/types/SessionForm";
+import { ClientInfo } from "@praxisnotes/types/src/SessionForm";
 
 type BasicInfoProps = {
   data: BasicInfoFormData;

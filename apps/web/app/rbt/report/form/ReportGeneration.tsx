@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from "react";
 import { useChat } from "@ai-sdk/react";
 import ReactMarkdown from "react-markdown";
-import { Report } from "../../../../lib/types/Report";
+import { Report } from "@praxisnotes/types/src/Report";
 import {
   SessionFormData,
   ActivityBasedSessionFormData,
-} from "../../../../lib/types/SessionForm";
+} from "@praxisnotes/types/src/SessionForm";
 
 type ReportGenerationProps = {
   formData: SessionFormData | ActivityBasedSessionFormData;

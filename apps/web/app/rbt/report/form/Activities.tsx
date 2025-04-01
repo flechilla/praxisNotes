@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import {
   ActivitiesFormData,
   Activity,
-} from "../../../../lib/types/SessionForm";
+} from "@praxisnotes/types/src/SessionForm";
 import ActivityForm from "./ActivityForm";
 import {
   activityLocationOptions,
@@ -102,7 +102,7 @@ export default function Activities({
   // Helper function to get label from value
   const getLabelFromValue = (
     value: string,
-    options: { value: string; label: string }[]
+    options: { value: string; label: string }[],
   ) => {
     const option = options.find((opt) => opt.value === value);
     return option ? option.label : value;
@@ -204,7 +204,7 @@ export default function Activities({
                       <p className="text-gray-900">
                         {getLabelFromValue(
                           activity.location,
-                          activityLocationOptions
+                          activityLocationOptions,
                         )}
                       </p>
                     </div>
@@ -242,7 +242,7 @@ export default function Activities({
                             <li key={pIndex}>
                               {getLabelFromValue(
                                 prompt.type,
-                                promptTypeOptions
+                                promptTypeOptions,
                               )}
                               : {prompt.count} times
                             </li>

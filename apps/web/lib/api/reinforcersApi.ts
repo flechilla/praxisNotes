@@ -1,4 +1,5 @@
 import { ReinforcerOption } from "../mocks/reinforcersData";
+import { ReinforcementOption } from "@praxisnotes/types";
 
 /**
  * Fetches all available reinforcers
@@ -18,7 +19,7 @@ export const fetchAllReinforcers = async (): Promise<ReinforcerOption[]> => {
       throw new Error("Invalid response format from reinforcements API");
     }
 
-    return data.reinforcements.map((reinforcer: any) => ({
+    return data.reinforcements.map((reinforcer: ReinforcementOption) => ({
       id: reinforcer.id,
       name: reinforcer.name,
       type: reinforcer.type,

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import {
   SkillAcquisitionFormData,
   Skill,
-} from "../../../../lib/types/SessionForm";
+} from "@praxisnotes/types/src/SessionForm";
 import { promptLevelOptions } from "../../constants/formOptions";
 import {
   SkillProgramOption,
@@ -141,7 +141,7 @@ export default function SkillAcquisition({
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value } = e.target;
 
@@ -163,7 +163,7 @@ export default function SkillAcquisition({
     } else if (name === "target") {
       // Find the target object
       const selectedTargetObj = targetSkills.find(
-        (target) => target.id === value
+        (target) => target.id === value,
       );
 
       setCurrentSkill({
@@ -275,7 +275,7 @@ export default function SkillAcquisition({
                   } catch (error) {
                     console.error("Error fetching target skills:", error);
                     setApiError(
-                      "Failed to load target skills. Please try again."
+                      "Failed to load target skills. Please try again.",
                     );
                   } finally {
                     setLoadingTargets(false);

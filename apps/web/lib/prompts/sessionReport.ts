@@ -4,8 +4,8 @@ import {
   Activity,
   ActivityBehavior,
   ActivityPrompt,
-} from "../types/SessionForm";
-import { ClientInfo } from "../types/SessionForm";
+} from "@praxisnotes/types/src/SessionForm";
+import { ClientInfo } from "@praxisnotes/types/src/SessionForm";
 
 // Function to generate the client information section of the prompt
 const generateClientInfoSection = (client: ClientInfo, rbtName: string) => {
@@ -22,7 +22,7 @@ CLIENT INFORMATION:
 // Function to generate the session information section of the prompt
 const generateSessionInfoSection = (
   basicInfo: SessionFormData["basicInfo"],
-  sessionDuration: string
+  sessionDuration: string,
 ) => {
   return `
 SESSION INFORMATION:
@@ -34,7 +34,7 @@ SESSION INFORMATION:
 
 // Function to generate the initial status section of the prompt
 const generateInitialStatusSection = (
-  initialStatus: ActivityBasedSessionFormData["initialStatus"]
+  initialStatus: ActivityBasedSessionFormData["initialStatus"],
 ) => {
   return `
 CLIENT INITIAL STATUS:
@@ -98,7 +98,7 @@ ${activity.reinforcement.notes ? `- Notes: ${activity.reinforcement.notes}` : ""
 
 // Function to generate the activities section of the prompt
 const generateActivitiesSection = (
-  activities: ActivityBasedSessionFormData["activities"]
+  activities: ActivityBasedSessionFormData["activities"],
 ) => {
   return `
 ACTIVITIES:
@@ -108,7 +108,7 @@ ${activities.activities.map((activity, index) => generateActivityDescription(act
 
 // Function to generate the general notes section of the prompt
 const generateGeneralNotesSection = (
-  generalNotes: SessionFormData["generalNotes"]
+  generalNotes: SessionFormData["generalNotes"],
 ) => {
   return `
 GENERAL NOTES:
@@ -121,7 +121,7 @@ GENERAL NOTES:
 
 // Function to generate the skill acquisition section (for backward compatibility)
 const generateSkillAcquisitionSection = (
-  skillAcquisition: SessionFormData["skillAcquisition"]
+  skillAcquisition: SessionFormData["skillAcquisition"],
 ) => {
   return `
 SKILL ACQUISITION:
@@ -132,7 +132,7 @@ ${skillAcquisition.skills
 - Trials: ${skill.trials} (${skill.correct} correct, ${skill.prompted} prompted, ${skill.incorrect} incorrect)
 - Prompt Level: ${skill.promptLevel}
 - Notes: ${skill.notes}
-`
+`,
   )
   .join("\n")}
 `;
@@ -140,7 +140,7 @@ ${skillAcquisition.skills
 
 // Function to generate the behavior tracking section (for backward compatibility)
 const generateBehaviorTrackingSection = (
-  behaviorTracking: SessionFormData["behaviorTracking"]
+  behaviorTracking: SessionFormData["behaviorTracking"],
 ) => {
   return `
 BEHAVIOR TRACKING:
@@ -154,7 +154,7 @@ ${behavior.intensity ? `- Intensity: ${behavior.intensity}` : ""}
 - Antecedent: ${behavior.antecedent}
 - Consequence: ${behavior.consequence}
 - Intervention: ${behavior.intervention}
-`
+`,
   )
   .join("\n")}
 `;
@@ -162,7 +162,7 @@ ${behavior.intensity ? `- Intensity: ${behavior.intensity}` : ""}
 
 // Function to generate the reinforcement section (for backward compatibility)
 const generateReinforcementSection = (
-  reinforcement: SessionFormData["reinforcement"]
+  reinforcement: SessionFormData["reinforcement"],
 ) => {
   return `
 REINFORCEMENT:
@@ -173,7 +173,7 @@ ${reinforcement.reinforcers
 - Reinforcer: ${reinforcer.reinforcerName || reinforcer.name}
 - Effectiveness: ${reinforcer.effectiveness}/5
 - Notes: ${reinforcer.notes}
-`
+`,
   )
   .join("\n")}
 `;
@@ -184,7 +184,7 @@ export const createNarrativeReportPrompt = (
   formData: ActivityBasedSessionFormData,
   client: ClientInfo,
   rbtName: string,
-  sessionDuration: string
+  sessionDuration: string,
 ): string => {
   let prompt = `
 You are a professional Registered Behavior Technician (RBT) writing a session report for a client. 
@@ -234,7 +234,7 @@ export const createLegacyReportPrompt = (
   formData: SessionFormData,
   client: ClientInfo,
   rbtName: string,
-  sessionDuration: string
+  sessionDuration: string,
 ): string => {
   let prompt = `
 You are a professional Registered Behavior Technician (RBT) writing a session report for a client. 

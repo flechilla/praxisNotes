@@ -7,7 +7,7 @@ import {
   FormStep,
   ActivityBasedSessionFormData,
   ActivityBasedFormStep,
-} from "../../../lib/types/SessionForm";
+} from "@praxisnotes/types/src/SessionForm";
 import BasicInfo from "./form/BasicInfo";
 import SkillAcquisition from "./form/SkillAcquisition";
 import BehaviorTracking from "./form/BehaviorTracking";
@@ -16,7 +16,6 @@ import GeneralNotes from "./form/GeneralNotes";
 import ReportGeneration from "./form/ReportGeneration";
 import InitialStatus from "./form/InitialStatus";
 import Activities from "./form/Activities";
-import { generateReport } from "../../../lib/utils/reportGeneration";
 
 // Feature flag for using the new activity-based flow
 const USE_ACTIVITY_BASED_FLOW = true;
@@ -606,29 +605,6 @@ export default function SessionForm() {
         );
       default:
         return null;
-    }
-  };
-
-  const handleSubmitForm = async () => {
-    try {
-      setIsSubmitting(true);
-      const rbtName = "Kelly Xu"; // Match RBT initials (KX) from narrative
-      let reportData;
-
-      // Convert activity-based form to report
-      if (USE_ACTIVITY_BASED_FLOW) {
-        reportData = await generateReport(activityBasedFormData, rbtName);
-      } else {
-        reportData = await generateReport(formData, rbtName);
-      }
-
-      // Navigate to the report page with report data
-      router.push(`/rbt/report/view?clientId=${formData.basicInfo.clientId}`);
-    } catch (error) {
-      console.error("Error submitting form:", error);
-      setError("Failed to generate report. Please try again.");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

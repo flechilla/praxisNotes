@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import {
   BehaviorTrackingFormData,
   Behavior,
-} from "../../../../lib/types/SessionForm";
+} from "@praxisnotes/types/src/SessionForm";
 import { behaviorIntensityOptions } from "../../constants/formOptions";
 import { BehaviorOption } from "../../../../lib/mocks/behaviorsData";
 import { fetchAllBehaviors } from "../../../../lib/api/behaviorsApi";
@@ -104,7 +104,7 @@ export default function BehaviorTracking({
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value } = e.target;
 

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import {
   ReinforcementFormData,
   Reinforcer,
-} from "../../../../lib/types/SessionForm";
+} from "@praxisnotes/types/src/SessionForm";
 import {
   reinforcerTypeOptions,
   effectivenessOptions,
