@@ -13,6 +13,21 @@ import {
 import { ClientService } from "../../../../lib/services/client.service";
 import { SessionService } from "../../../../lib/services/session.service";
 import { ReportService } from "../../../../lib/services/report.service";
+import { db } from "../../../../lib/db";
+import {
+  activities,
+  activityBehaviors,
+  activityPrompts,
+  activityReinforcements,
+  initialStatuses,
+  generalNotes,
+  skillTrackings,
+  behaviorTrackings,
+  reinforcements,
+  noteCategoryEnum,
+  promptLevelEnum,
+} from "@praxisnotes/database";
+import { eq } from "drizzle-orm";
 
 // Function to check if form data is activity-based
 const isActivityBased = (
@@ -34,6 +49,267 @@ const calculateSessionDuration = (
     (durationMs % (1000 * 60 * 60)) / (1000 * 60),
   );
   return `${durationHours > 0 ? `${durationHours} hour${durationHours > 1 ? "s" : ""}` : ""} ${durationMinutes} minute${durationMinutes > 1 ? "s" : ""}`.trim();
+};
+
+// Save activity-based session data
+const saveActivityBasedSessionData = async (
+  sessionId: string,
+  formData: ActivityBasedSessionFormData,
+) => {
+  try {
+    // Save initial status - using available fields from the schema
+    await db.insert(initialStatuses).values({
+      sessionId,
+      caregiverReport: formData.initialStatus.caregiverReport,
+      contextNotes: formData.initialStatus.initialResponse,
+      physicalState: formData.initialStatus.medicationChanges,
+      sessionReadiness: formData.initialStatus.clientStatus,
+    });
+
+    // Save general notes - one row per note type
+    await db.insert(generalNotes).values({
+      sessionId,
+      title: "Session Notes",
+      content: formData.generalNotes.sessionNotes,
+      category: "general",
+    });
+
+    await db.insert(generalNotes).values({
+      sessionId,
+      title: "Caregiver Feedback",
+      content: formData.generalNotes.caregiverFeedback,
+      category: "caregiver",
+    });
+
+    await db.insert(generalNotes).values({
+      sessionId,
+      title: "Environmental Factors",
+      content: formData.generalNotes.environmentalFactors,
+      category: "environmental",
+    });
+
+    await db.insert(generalNotes).values({
+      sessionId,
+      title: "Next Session Focus",
+      content: formData.generalNotes.nextSessionFocus,
+      category: "general",
+    });
+
+    // Save activities and their related data
+    for (const activity of formData.activities.activities) {
+      // Insert activity
+      const [newActivity] = await db
+        .insert(activities)
+        .values({
+          sessionId,
+          name: activity.name,
+          description: activity.description,
+          goal: activity.goal,
+          location: activity.location,
+          duration: activity.duration,
+          completed: activity.completed,
+          completionNotes: activity.completionNotes,
+        })
+        .returning();
+
+      if (newActivity) {
+        // Insert behaviors - use null for intensity if not a valid value
+        for (const behavior of activity.behaviors) {
+          // For intensity, map to exact literal type values
+          const intensityMap = {
+            "1 - mild": "1 - mild",
+            "2 - moderate": "2 - moderate",
+            "3 - significant": "3 - significant",
+            "4 - severe": "4 - severe",
+            "5 - extreme": "5 - extreme",
+          } as const;
+
+          const intensity =
+            intensityMap[behavior.intensity as keyof typeof intensityMap] ||
+            null;
+
+          await db.insert(activityBehaviors).values({
+            activityId: newActivity.id,
+            behaviorName: behavior.behaviorName,
+            definition: behavior.definition,
+            intensity,
+            interventionUsed: JSON.stringify(behavior.interventionUsed),
+            interventionNotes: behavior.interventionNotes,
+          });
+        }
+
+        // Insert prompts
+        for (const prompt of activity.promptsUsed) {
+          // Make sure the prompt type matches the enum
+          const validPromptType =
+            prompt.type === "Verbal" ||
+            prompt.type === "Gestural" ||
+            prompt.type === "Model" ||
+            prompt.type === "Partial Physical" ||
+            prompt.type === "Full Physical"
+              ? prompt.type
+              : "Verbal"; // Default to verbal if not matching
+
+          await db.insert(activityPrompts).values({
+            activityId: newActivity.id,
+            promptType: validPromptType,
+            frequency: prompt.count,
+          });
+        }
+
+        // Create a reinforcement with type defaulting to "other" if invalid
+        const typeMap = {
+          primary: "primary",
+          secondary: "secondary",
+          social: "social",
+          token: "token",
+          activity: "activity",
+          other: "other",
+        } as const;
+
+        const type =
+          typeMap[
+            activity.reinforcement.type.toLowerCase() as keyof typeof typeMap
+          ] || "other";
+
+        const [newReinforcement] = await db
+          .insert(reinforcements)
+          .values({
+            name: activity.reinforcement.reinforcerName,
+            type,
+            description: activity.reinforcement.notes,
+          })
+          .returning();
+
+        if (newReinforcement) {
+          // Then create the association
+          await db.insert(activityReinforcements).values({
+            activityId: newActivity.id,
+            reinforcementId: newReinforcement.id,
+          });
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error saving activity-based session data:", error);
+    throw error;
+  }
+};
+
+// Save traditional session data
+const saveTraditionalSessionData = async (
+  sessionId: string,
+  formData: SessionFormData,
+) => {
+  try {
+    // Save general notes - one row per note type
+    await db.insert(generalNotes).values({
+      sessionId,
+      title: "Session Notes",
+      content: formData.generalNotes.sessionNotes,
+      category: "general",
+    });
+
+    await db.insert(generalNotes).values({
+      sessionId,
+      title: "Caregiver Feedback",
+      content: formData.generalNotes.caregiverFeedback,
+      category: "caregiver",
+    });
+
+    await db.insert(generalNotes).values({
+      sessionId,
+      title: "Environmental Factors",
+      content: formData.generalNotes.environmentalFactors,
+      category: "environmental",
+    });
+
+    await db.insert(generalNotes).values({
+      sessionId,
+      title: "Next Session Focus",
+      content: formData.generalNotes.nextSessionFocus,
+      category: "general",
+    });
+
+    // Save skills
+    for (const skill of formData.skillAcquisition.skills) {
+      // Make sure the prompt level matches the enum
+      const validPromptLevel =
+        skill.promptLevel === "Independent" ||
+        skill.promptLevel === "Verbal" ||
+        skill.promptLevel === "Gestural" ||
+        skill.promptLevel === "Model" ||
+        skill.promptLevel === "Partial Physical" ||
+        skill.promptLevel === "Full Physical"
+          ? skill.promptLevel
+          : "Verbal"; // Default to verbal if not matching
+
+      await db.insert(skillTrackings).values({
+        sessionId,
+        skillName: skill.name, // Using skillName field from schema
+        name: skill.name,
+        target: skill.target,
+        program: skill.program,
+        promptLevel: validPromptLevel,
+        trials: skill.trials,
+        mastery: skill.mastery,
+        notes: skill.notes,
+      });
+    }
+
+    // Save behaviors
+    for (const behavior of formData.behaviorTracking.behaviors) {
+      // For intensity, map to exact literal type values
+      const intensityMap = {
+        "1 - mild": "1 - mild",
+        "2 - moderate": "2 - moderate",
+        "3 - significant": "3 - significant",
+        "4 - severe": "4 - severe",
+        "5 - extreme": "5 - extreme",
+      } as const;
+
+      const intensity =
+        intensityMap[behavior.intensity as keyof typeof intensityMap] || null;
+
+      await db.insert(behaviorTrackings).values({
+        sessionId,
+        behaviorName: behavior.name,
+        definition: behavior.definition,
+        frequency: behavior.frequency,
+        duration: behavior.duration,
+        intensity,
+        notes: behavior.notes,
+        antecedent: behavior.antecedent,
+        consequence: behavior.consequence,
+        interventionUsed: behavior.intervention,
+      });
+    }
+
+    // Save reinforcers
+    for (const reinforcer of formData.reinforcement.reinforcers) {
+      const typeMap = {
+        primary: "primary",
+        secondary: "secondary",
+        social: "social",
+        token: "token",
+        activity: "activity",
+        other: "other",
+      } as const;
+
+      const type =
+        typeMap[reinforcer.type.toLowerCase() as keyof typeof typeMap] ||
+        "other";
+
+      await db.insert(reinforcements).values({
+        name: reinforcer.name,
+        type,
+        description: reinforcer.notes,
+      });
+    }
+  } catch (error) {
+    console.error("Error saving traditional session data:", error);
+    throw error;
+  }
 };
 
 export async function POST(request: NextRequest) {
@@ -128,6 +404,24 @@ export async function POST(request: NextRequest) {
     }
     console.log(`Created session with ID: ${session.id}`);
 
+    // Save the detailed form data based on session type
+    try {
+      if (activityBasedForm) {
+        await saveActivityBasedSessionData(
+          session.id,
+          formData as ActivityBasedSessionFormData,
+        );
+      } else {
+        await saveTraditionalSessionData(
+          session.id,
+          formData as SessionFormData,
+        );
+      }
+    } catch (error) {
+      console.error("Error saving detailed session data:", error);
+      // Continue with report generation even if detailed data saving fails
+    }
+
     // Create prompt for AI based on form type
     let prompt: string;
     if (activityBasedForm) {
@@ -146,70 +440,78 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create a base report with form data
-    const baseReport: Omit<Report, "fullContent"> = {
+    // Create basic metadata for the report
+    const reportMetadata = {
       clientName: `${client.firstName} ${client.lastName}`,
       sessionDate: formData.basicInfo.sessionDate,
       sessionDuration,
       location: formData.basicInfo.location,
       rbtName,
-      summary: "",
-      skillAcquisition: {
-        title: "Skill Acquisition",
-        content: "",
-      },
-      behaviorManagement: {
-        title: "Behavior Management",
-        content: "",
-      },
-      reinforcement: {
-        title: "Reinforcement",
-        content: "",
-      },
-      observations: {
-        title: "Observations",
-        content: "",
-      },
-      recommendations: {
-        title: "Recommendations",
-        content: "",
-      },
-      nextSteps: {
-        title: "Next Steps",
-        content: "",
-      },
-      createdAt: new Date().toISOString(),
-      status: "draft",
     };
 
     console.log(
       `Starting report generation for client: ${client.firstName} ${client.lastName}`,
     );
 
-    // Return the data stream response with the full report
+    // Return the data stream response with the report
     return createDataStreamResponse({
       execute: (dataStream) => {
-        // Send base report structure to the client
-        dataStream.writeData({ baseReport });
+        // Send metadata to the client
+        dataStream.writeData({ reportMetadata });
 
         const result = streamText({
           model: anthropic("claude-3-5-sonnet-20241022"),
           prompt,
           onFinish: async (result) => {
-            // Initialize the complete report with the generated content
-            const completeReport: Report = {
-              ...baseReport,
-              fullContent: result.text,
-            };
+            // Save the report with the generated content
+            try {
+              const savedReport = await ReportService.createReport(
+                session.id,
+                userId,
+                clientId,
+                {
+                  clientName: reportMetadata.clientName,
+                  sessionDate: reportMetadata.sessionDate,
+                  sessionDuration: reportMetadata.sessionDuration,
+                  location: reportMetadata.location,
+                  rbtName: reportMetadata.rbtName,
+                  summary: "",
+                  skillAcquisition: {
+                    title: "Skill Acquisition",
+                    content: "",
+                  },
+                  behaviorManagement: {
+                    title: "Behavior Management",
+                    content: "",
+                  },
+                  reinforcement: {
+                    title: "Reinforcement",
+                    content: "",
+                  },
+                  observations: {
+                    title: "Observations",
+                    content: "",
+                  },
+                  recommendations: {
+                    title: "Recommendations",
+                    content: "",
+                  },
+                  nextSteps: {
+                    title: "Next Steps",
+                    content: "",
+                  },
+                  fullContent: result.text,
+                },
+              );
 
-            // Save the report to the database
-            const savedReport = await ReportService.createReport(
-              session.id,
-              userId,
-              clientId,
-              completeReport,
-            );
-            console.log(`Saved report with ID: ${savedReport.id}`);
+              if (savedReport) {
+                console.log(`Saved report with ID: ${savedReport.id}`);
+              } else {
+                console.error("Failed to save report");
+              }
+            } catch (error) {
+              console.error("Error saving report:", error);
+            }
           },
         });
 
