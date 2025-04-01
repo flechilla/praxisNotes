@@ -1,0 +1,86 @@
+# PraxisNotes Database Package
+
+This package provides the database infrastructure for the PraxisNotes application using Drizzle ORM with PostgreSQL and Supabase.
+
+## Features
+
+- Schema definitions using Drizzle ORM
+- Type-safe database operations
+- Migration management
+- Seeding utilities for development
+
+## Setup
+
+1. Create a `.env` file in the packages/database directory with the following content:
+
+```
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/praxisnotes"
+NODE_ENV="development"
+```
+
+2. Replace the `DATABASE_URL` with your actual PostgreSQL connection string or Supabase connection string.
+
+## Usage
+
+### Building the package
+
+```
+npm run build
+```
+
+### Running migrations
+
+```
+npm run migrate
+```
+
+### Seeding the database (for development)
+
+```
+npm run seed
+```
+
+## Database Schema
+
+### Entities
+
+1. **Organization**
+
+   - Properties: id, name, slug, description, logoUrl
+   - Relationships: Has many Users, Has many Clients
+
+2. **User**
+
+   - Properties: id, email, firstName, lastName, fullName, avatarUrl, authProvider, ...
+   - Relationships: Belongs to one or more Organizations, Has one or more Roles, Has many Clients
+
+3. **Role**
+
+   - Properties: id, name, description
+   - Relationships: Belongs to many Users
+
+4. **Client**
+   - Properties: id, name, email, phone, address, notes
+   - Relationships: Belongs to one Organization, Belongs to one or more Users
+
+### Relationship Tables
+
+1. **organization_users** - Many-to-many relationship between Organizations and Users
+2. **user_roles** - Many-to-many relationship between Users and Roles
+3. **user_clients** - Many-to-many relationship between Users and Clients
+
+## Using the Database in Other Packages
+
+```typescript
+import { db } from "@repo/database";
+import { users, organizations } from "@repo/database/schema";
+
+// Query example
+const result = await db.query.users.findMany({
+  where: (user, { eq }) => eq(user.isActive, true),
+  with: {
+    organizations: true,
+    roles: true,
+  },
+});
+```
