@@ -1,10 +1,15 @@
 import { pgTable, uuid, timestamp, text } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 import { sessions } from "./session.table";
 import { clients } from "./client.table";
 import { users } from "./user.table";
-import { sessionStatusEnum } from "./session.table";
+import { reportSections } from "./report_section.table";
+import {
+  sessionStatusEnum,
+  SESSION_STATUS_VALUES,
+} from "../enums/session-status.enum";
 
 /**
  * Reports table schema definition
@@ -28,6 +33,25 @@ export const reports = pgTable("reports", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+/**
+ * Define report relations
+ */
+export const reportsRelations = relations(reports, ({ one, many }) => ({
+  session: one(sessions, {
+    fields: [reports.sessionId],
+    references: [sessions.id],
+  }),
+  user: one(users, {
+    fields: [reports.userId],
+    references: [users.id],
+  }),
+  client: one(clients, {
+    fields: [reports.clientId],
+    references: [clients.id],
+  }),
+  sections: many(reportSections),
+}));
+
 // Types derived from the schema
 export type ReportSelect = typeof reports.$inferSelect;
 export type ReportInsert = typeof reports.$inferInsert;
@@ -39,7 +63,9 @@ export const insertReportSchema = createInsertSchema(reports, {
   clientId: z.string().uuid(),
   summary: z.string().optional().nullable(),
   fullContent: z.string().min(1),
-  status: z.enum(["draft", "submitted", "reviewed"]).default("draft"),
+  status: z
+    .enum(SESSION_STATUS_VALUES as [string, ...string[]])
+    .default("draft"),
 }).omit({ id: true, createdAt: true, updatedAt: true });
 
 export const selectReportSchema = createSelectSchema(reports);

@@ -1,5 +1,11 @@
 // Export database client
 export * from "./client";
 
-// Export all schemas and their types
+// Export schema
 export * from "./schema";
+
+// Export enums
+export * from "./enums";
+
+// Export seed functions
+export * from "./seed";

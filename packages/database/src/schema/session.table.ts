@@ -4,19 +4,23 @@ import {
   timestamp,
   varchar,
   boolean,
-  pgEnum,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 import { clients } from "./client.table";
 import { users } from "./user.table";
-
-// Define enums for session status
-export const sessionStatusEnum = pgEnum("session_status", [
-  "draft",
-  "submitted",
-  "reviewed",
-]);
+import { reports } from "./report.table";
+import { skillTrackings } from "./skill_tracking.table";
+import { behaviorTrackings } from "./behavior_tracking.table";
+import { reinforcements } from "./reinforcement.table";
+import { activities } from "./activity.table";
+import { initialStatuses } from "./initial_status.table";
+import { generalNotes } from "./general_notes.table";
+import {
+  sessionStatusEnum,
+  SESSION_STATUS_VALUES,
+} from "../enums/session-status.enum";
 
 /**
  * Sessions table schema definition
@@ -40,6 +44,27 @@ export const sessions = pgTable("sessions", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+/**
+ * Define session relations
+ */
+export const sessionsRelations = relations(sessions, ({ one, many }) => ({
+  client: one(clients, {
+    fields: [sessions.clientId],
+    references: [clients.id],
+  }),
+  user: one(users, {
+    fields: [sessions.userId],
+    references: [users.id],
+  }),
+  reports: many(reports),
+  skillTrackings: many(skillTrackings),
+  behaviorTrackings: many(behaviorTrackings),
+  reinforcements: many(reinforcements),
+  activities: many(activities),
+  initialStatus: one(initialStatuses),
+  generalNotes: many(generalNotes),
+}));
+
 // Types derived from the schema
 export type SessionSelect = typeof sessions.$inferSelect;
 export type SessionInsert = typeof sessions.$inferInsert;
@@ -53,7 +78,9 @@ export const insertSessionSchema = createInsertSchema(sessions, {
   endTime: z.coerce.date(),
   location: z.string().min(1).max(255),
   isActivityBased: z.boolean().default(false),
-  status: z.enum(["draft", "submitted", "reviewed"]).default("draft"),
+  status: z
+    .enum(SESSION_STATUS_VALUES as [string, ...string[]])
+    .default("draft"),
 }).omit({ id: true, createdAt: true, updatedAt: true });
 
 export const selectSessionSchema = createSelectSchema(sessions);

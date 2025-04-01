@@ -1,127 +1,109 @@
 import { pgTable, uuid, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 import { sessions } from "./session.table";
+import {
+  moodEnum,
+  MOOD,
+  MOOD_VALUES,
+  MOOD_EMOJI_MAP,
+} from "../enums/mood.enum";
+import {
+  attentionLevelEnum,
+  ATTENTION_LEVEL,
+  ATTENTION_LEVEL_VALUES,
+  ATTENTION_LEVEL_DESCRIPTIONS,
+} from "../enums/attention-level.enum";
 
 /**
- * Initial status table schema for tracking client status at the beginning of a session
+ * Initial status table schema
+ * Represents the client's initial status at the beginning of a therapy session
  */
 export const initialStatuses = pgTable("initial_statuses", {
   id: uuid("id").defaultRandom().primaryKey(),
   sessionId: uuid("session_id")
     .references(() => sessions.id, { onDelete: "cascade" })
     .notNull()
-    .unique(), // One initial status per session
-  clientStatus: text("client_status"),
+    .unique(),
+  mood: moodEnum("mood"),
+  attention: attentionLevelEnum("attention"),
+  contextNotes: text("context_notes"),
+  physicalState: text("physical_state"),
+  sessionReadiness: text("session_readiness"),
   caregiverReport: text("caregiver_report"),
-  initialResponse: text("initial_response"),
-  medicationChanges: text("medication_changes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Types for TypeScript type inference
+/**
+ * Define initial status relations
+ */
+export const initialStatusesRelations = relations(
+  initialStatuses,
+  ({ one }) => ({
+    session: one(sessions, {
+      fields: [initialStatuses.sessionId],
+      references: [sessions.id],
+    }),
+  }),
+);
+
+// Types derived from the schema
 export type InitialStatus = typeof initialStatuses.$inferSelect;
 export type InitialStatusInsert = typeof initialStatuses.$inferInsert;
 
 // Zod schemas for validation
 export const insertInitialStatusSchema = createInsertSchema(initialStatuses, {
   sessionId: z.string().uuid(),
-  clientStatus: z.string().optional().nullable(),
+  mood: z
+    .enum(MOOD_VALUES as [string, ...string[]])
+    .optional()
+    .nullable(),
+  attention: z
+    .enum(ATTENTION_LEVEL_VALUES as [string, ...string[]])
+    .optional()
+    .nullable(),
+  contextNotes: z.string().optional().nullable(),
+  physicalState: z.string().optional().nullable(),
+  sessionReadiness: z.string().optional().nullable(),
   caregiverReport: z.string().optional().nullable(),
-  initialResponse: z.string().optional().nullable(),
-  medicationChanges: z.string().optional().nullable(),
-});
+}).omit({ id: true, createdAt: true, updatedAt: true });
 
-export const selectInitialStatusSchema = createSelectSchema(initialStatuses, {
-  id: z.string().uuid(),
-  sessionId: z.string().uuid(),
-  clientStatus: z.string().nullable(),
-  caregiverReport: z.string().nullable(),
-  initialResponse: z.string().nullable(),
-  medicationChanges: z.string().nullable(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-});
-
-// Common client status indicators
-export const COMMON_CLIENT_STATUS = [
-  "Calm",
-  "Energetic",
-  "Tired",
-  "Agitated",
-  "Focused",
-  "Distracted",
-  "Happy",
-  "Sad",
-  "Anxious",
-  "Frustrated",
-] as const;
+export const selectInitialStatusSchema = createSelectSchema(initialStatuses);
 
 /**
- * Helper function to generate a formatted initial status summary
- * @param initialStatus Initial status object with client information
- * @returns A formatted string with the initial status summary
+ * Generate a summary of the client's initial status
+ * @param initialStatus The initial status record
+ * @returns A formatted summary string
  */
-export function generateInitialStatusSummary(
-  initialStatus: Partial<InitialStatus>,
+export function summarizeInitialStatus(
+  initialStatus: Pick<
+    InitialStatus,
+    "mood" | "attention" | "physicalState" | "caregiverReport"
+  >,
 ): string {
-  const sections: string[] = [];
+  const moodEmoji = initialStatus.mood
+    ? MOOD_EMOJI_MAP[initialStatus.mood]
+    : "";
 
-  if (initialStatus.clientStatus) {
-    sections.push(`Client Status: ${initialStatus.clientStatus}`);
+  let summary = `Client Status: ${moodEmoji} ${initialStatus.mood || "Not recorded"}`;
+
+  if (initialStatus.attention) {
+    summary += ` | Attention: ${initialStatus.attention.replace(/_/g, " ")}`;
+  }
+
+  if (initialStatus.physicalState) {
+    summary += ` | Physical: ${initialStatus.physicalState}`;
   }
 
   if (initialStatus.caregiverReport) {
-    sections.push(`Caregiver Report: ${initialStatus.caregiverReport}`);
+    const shortReport =
+      initialStatus.caregiverReport.length > 50
+        ? initialStatus.caregiverReport.substring(0, 50) + "..."
+        : initialStatus.caregiverReport;
+    summary += ` | Caregiver Report: ${shortReport}`;
   }
 
-  if (initialStatus.initialResponse) {
-    sections.push(
-      `Initial Response to Session: ${initialStatus.initialResponse}`,
-    );
-  }
-
-  if (initialStatus.medicationChanges) {
-    sections.push(`Medication Changes: ${initialStatus.medicationChanges}`);
-  }
-
-  return sections.length > 0
-    ? sections.join("\n\n")
-    : "No initial status information recorded for this session.";
-}
-
-/**
- * Helper function to check if medication changes require follow-up
- * @param medicationChanges The medication changes text
- * @returns Boolean indicating if follow-up is recommended
- */
-export function medicationChangeRequiresFollowUp(
-  medicationChanges: string | null | undefined,
-): boolean {
-  if (!medicationChanges) {
-    return false;
-  }
-
-  // Keywords that might indicate a need for follow-up
-  const followUpKeywords = [
-    "new medication",
-    "started",
-    "increased",
-    "decreased",
-    "stopped",
-    "side effect",
-    "concern",
-    "issue",
-    "problem",
-    "difficulty",
-    "adverse",
-    "reaction",
-  ];
-
-  const normalizedChanges = medicationChanges.toLowerCase();
-
-  return followUpKeywords.some((keyword) =>
-    normalizedChanges.includes(keyword.toLowerCase()),
-  );
+  return summary;
 }

@@ -1,6 +1,7 @@
 import { pgTable, timestamp, uuid, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 import { roles } from "./role.table";
 import { users } from "./user.table";
 
@@ -24,12 +25,26 @@ export const userRoles = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (table) => {
-    return {
+  (table) => [
+    {
       pk: primaryKey({ columns: [table.userId, table.roleId] }),
-    };
-  },
+    },
+  ],
 );
+
+/**
+ * Define user role relations
+ */
+export const userRolesRelations = relations(userRoles, ({ one }) => ({
+  user: one(users, {
+    fields: [userRoles.userId],
+    references: [users.id],
+  }),
+  role: one(roles, {
+    fields: [userRoles.roleId],
+    references: [roles.id],
+  }),
+}));
 
 // Types derived from the schema
 export type UserRole = typeof userRoles.$inferSelect;

@@ -8,7 +8,10 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 import { organizations } from "./organization.table";
+import { sessions } from "./session.table";
+import { reports } from "./report.table";
 
 /**
  * Client table schema definition
@@ -31,6 +34,14 @@ export const clients = pgTable("clients", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+/**
+ * Define client relations
+ */
+export const clientsRelations = relations(clients, ({ many }) => ({
+  sessions: many(sessions),
+  reports: many(reports),
+}));
 
 // Types derived from the schema
 export type Client = typeof clients.$inferSelect;

@@ -1,8 +1,12 @@
 import { pgTable, uuid, varchar, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 import { activities } from "./activity.table";
-import { intensityLevelEnum } from "./behavior_tracking.table";
+import {
+  intensityLevelEnum,
+  INTENSITY_LEVEL_VALUES,
+} from "../enums/intensity-level.enum";
 
 /**
  * Activity behavior table schema for tracking behaviors observed during specific activities
@@ -21,6 +25,19 @@ export const activityBehaviors = pgTable("activity_behaviors", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+/**
+ * Define activity behavior relations
+ */
+export const activityBehaviorsRelations = relations(
+  activityBehaviors,
+  ({ one }) => ({
+    activity: one(activities, {
+      fields: [activityBehaviors.activityId],
+      references: [activities.id],
+    }),
+  }),
+);
+
 // Types for TypeScript type inference
 export type ActivityBehavior = typeof activityBehaviors.$inferSelect;
 export type ActivityBehaviorInsert = typeof activityBehaviors.$inferInsert;
@@ -33,19 +50,13 @@ export const insertActivityBehaviorSchema = createInsertSchema(
     behaviorName: z.string().min(1).max(255),
     definition: z.string().optional().nullable(),
     intensity: z
-      .enum([
-        "1 - mild",
-        "2 - moderate",
-        "3 - significant",
-        "4 - severe",
-        "5 - extreme",
-      ])
+      .enum(INTENSITY_LEVEL_VALUES as [string, ...string[]])
       .optional()
       .nullable(),
     interventionUsed: z.string().optional().nullable(), // JSON string validation
     interventionNotes: z.string().optional().nullable(),
   },
-);
+).omit({ id: true, createdAt: true, updatedAt: true });
 
 export const selectActivityBehaviorSchema = createSelectSchema(
   activityBehaviors,

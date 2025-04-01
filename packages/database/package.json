@@ -15,7 +15,8 @@
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
     "studio": "drizzle-kit studio",
-    "seed": "tsx src/seed/index.ts"
+    "seed": "tsx src/seed/index.ts",
+    "clean-db": "tsx src/seed/clean.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

@@ -84,3 +84,63 @@ const result = await db.query.users.findMany({
   },
 });
 ```
+
+## PostgreSQL Enum Types
+
+When working with PostgreSQL enums in Drizzle, follow these guidelines to ensure proper migration generation:
+
+1. Define enum types in the `/src/enums` directory using the `pgEnum` utility from Drizzle:
+
+```typescript
+// Example: src/enums/intensity-level.enum.ts
+import { pgEnum } from "drizzle-orm/pg-core";
+
+export const intensityLevelEnum = pgEnum("intensity_level", [
+  "1 - mild",
+  "2 - moderate",
+  "3 - significant",
+  "4 - severe",
+  "5 - extreme",
+]);
+
+// Add any helper types, constants, etc.
+```
+
+2. Export all enums from the `/src/enums/index.ts` file:
+
+```typescript
+// src/enums/index.ts
+export * from "./intensity-level.enum";
+export * from "./attention-level.enum";
+// Export other enums...
+```
+
+3. Import the enums in your schema tables:
+
+```typescript
+import { intensityLevelEnum } from "../enums/intensity-level.enum";
+
+export const myTable = pgTable("my_table", {
+  // ...
+  intensity: intensityLevelEnum("intensity"),
+  // ...
+});
+```
+
+4. Ensure the Drizzle config includes both schema and enum directories:
+
+```typescript
+// drizzle.config.ts
+export default defineConfig({
+  schema: ["./src/schema/*", "./src/enums/*"],
+  // ...
+});
+```
+
+5. Generate migrations:
+
+```bash
+npm run generate
+```
+
+This configuration ensures that enum types are properly defined before they are referenced in table definitions, avoiding the "type does not exist" errors during migration.

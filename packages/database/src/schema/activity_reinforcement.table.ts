@@ -1,10 +1,18 @@
-import { pgTable, uuid, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  uuid,
+  varchar,
+  text,
+  timestamp,
+  integer,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 import { activities } from "./activity.table";
 import {
   reinforcementTypeEnum,
-  effectivenessLevelEnum,
+  reinforcementEffectivenessEnum,
 } from "./reinforcement.table";
 
 /**
@@ -15,13 +23,28 @@ export const activityReinforcements = pgTable("activity_reinforcements", {
   activityId: uuid("activity_id")
     .references(() => activities.id, { onDelete: "cascade" })
     .notNull(),
-  name: text("name").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
   type: reinforcementTypeEnum("type").notNull(),
-  effectiveness: effectivenessLevelEnum("effectiveness"),
+  description: text("description"),
+  frequency: integer("frequency").default(0),
+  effectiveness: reinforcementEffectivenessEnum("effectiveness"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+/**
+ * Define activity reinforcement relations
+ */
+export const activityReinforcementsRelations = relations(
+  activityReinforcements,
+  ({ one }) => ({
+    activity: one(activities, {
+      fields: [activityReinforcements.activityId],
+      references: [activities.id],
+    }),
+  }),
+);
 
 // Types for TypeScript type inference
 export type ActivityReinforcement = typeof activityReinforcements.$inferSelect;
@@ -33,30 +56,75 @@ export const insertActivityReinforcementSchema = createInsertSchema(
   activityReinforcements,
   {
     activityId: z.string().uuid(),
-    name: z.string().min(1),
+    name: z.string().min(1).max(255),
     type: z.enum([
-      "Token Economy",
-      "Social Praise",
-      "Tangible Item",
-      "Preferred Activity",
-      "Break",
-      "Edible",
-      "Natural Consequence",
-      "Preferred Toy",
-      "Primary Reinforcer",
-      "Secondary Reinforcer",
+      "primary",
+      "secondary",
+      "social",
+      "token",
+      "activity",
+      "other",
     ]),
-    effectiveness: z
-      .enum(["High", "Medium", "Low", "Variable", "Not Effective"])
-      .optional()
-      .nullable(),
+    description: z.string().optional().nullable(),
+    frequency: z.number().int().nonnegative().optional(),
+    effectiveness: z.enum(["low", "medium", "high"]).optional().nullable(),
     notes: z.string().optional().nullable(),
   },
-);
+).omit({ id: true, createdAt: true, updatedAt: true });
 
 export const selectActivityReinforcementSchema = createSelectSchema(
   activityReinforcements,
+  {
+    id: z.string().uuid(),
+    activityId: z.string().uuid(),
+    name: z.string(),
+    type: z.string(),
+    description: z.string().nullable(),
+    frequency: z.number(),
+    effectiveness: z.string().nullable(),
+    notes: z.string().nullable(),
+    createdAt: z.coerce.date(),
+    updatedAt: z.coerce.date(),
+  },
 );
+
+/**
+ * Helper function to determine if a reinforcement should be used more based on effectiveness
+ * @param activityReinforcement The reinforcement data
+ * @returns Boolean indicating if reinforcement should be used more frequently
+ */
+export function shouldIncreaseReinforcementUse(
+  activityReinforcement: Pick<ActivityReinforcement, "effectiveness" | "name">,
+): boolean {
+  return activityReinforcement.effectiveness === "high";
+}
+
+/**
+ * Helper function to generate specific reinforcement recommendation
+ * @param activityReinforcement The reinforcement data
+ * @returns A specific recommendation for future use
+ */
+export function generateReinforcementRecommendation(
+  activityReinforcement: Pick<
+    ActivityReinforcement,
+    "name" | "effectiveness" | "frequency"
+  >,
+): string {
+  if (!activityReinforcement.effectiveness) {
+    return `Continue tracking the effectiveness of "${activityReinforcement.name}"`;
+  }
+
+  switch (activityReinforcement.effectiveness) {
+    case "high":
+      return `Continue using "${activityReinforcement.name}" as it was highly effective`;
+    case "medium":
+      return `Consider pairing "${activityReinforcement.name}" with another reinforcer for increased effectiveness`;
+    case "low":
+      return `Consider replacing "${activityReinforcement.name}" with a different reinforcer`;
+    default:
+      return `Continue evaluating "${activityReinforcement.name}"`;
+  }
+}
 
 /**
  * Interface defining properties for creating reinforcement recommendations

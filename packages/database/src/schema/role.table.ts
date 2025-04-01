@@ -1,6 +1,8 @@
 import { pgTable, varchar, timestamp, text, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
+import { users } from "./user.table";
 
 /**
  * Role table schema definition
@@ -13,6 +15,13 @@ export const roles = pgTable("roles", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+/**
+ * Define role relations
+ */
+export const rolesRelations = relations(roles, ({ many }) => ({
+  users: many(users),
+}));
 
 // Types derived from the schema
 export type Role = typeof roles.$inferSelect;

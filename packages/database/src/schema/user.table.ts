@@ -8,6 +8,11 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
+import { sessions } from "./session.table";
+import { reports } from "./report.table";
+import { clients } from "./client.table";
+import { roles } from "./role.table";
 
 /**
  * User table schema definition
@@ -31,6 +36,17 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   lastLoginAt: timestamp("last_login_at"),
 });
+
+/**
+ * Define user relations
+ * Imported tables are referenced through import placeholders to avoid circular dependencies
+ */
+export const usersRelations = relations(users, ({ many }) => ({
+  sessions: many(sessions),
+  reports: many(reports),
+  clients: many(clients),
+  roles: many(roles),
+}));
 
 // Types derived from the schema
 export type User = typeof users.$inferSelect;

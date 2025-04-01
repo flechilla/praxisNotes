@@ -9,7 +9,11 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 import { sessions } from "./session.table";
+import { activityBehaviors } from "./activity_behavior.table";
+import { activityPrompts } from "./activity_prompt.table";
+import { activityReinforcements } from "./activity_reinforcement.table";
 
 /**
  * Activity table schema for tracking activities performed during activity-based therapy sessions
@@ -30,6 +34,19 @@ export const activities = pgTable("activities", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+/**
+ * Define activity relations
+ */
+export const activitiesRelations = relations(activities, ({ one, many }) => ({
+  session: one(sessions, {
+    fields: [activities.sessionId],
+    references: [sessions.id],
+  }),
+  behaviors: many(activityBehaviors),
+  prompts: many(activityPrompts),
+  reinforcement: one(activityReinforcements),
+}));
+
 // Types for TypeScript type inference
 export type Activity = typeof activities.$inferSelect;
 export type ActivityInsert = typeof activities.$inferInsert;
@@ -44,7 +61,7 @@ export const insertActivitySchema = createInsertSchema(activities, {
   duration: z.number().int().positive().optional().nullable(),
   completed: z.boolean().default(false),
   completionNotes: z.string().optional().nullable(),
-});
+}).omit({ id: true, createdAt: true, updatedAt: true });
 
 export const selectActivitySchema = createSelectSchema(activities, {
   id: z.string().uuid(),

@@ -1,6 +1,14 @@
-import { pgTable, uuid, text, timestamp, integer } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  uuid,
+  varchar,
+  text,
+  timestamp,
+  integer,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 import { activities } from "./activity.table";
 import { promptLevelEnum } from "./skill_tracking.table";
 
@@ -12,12 +20,26 @@ export const activityPrompts = pgTable("activity_prompts", {
   activityId: uuid("activity_id")
     .references(() => activities.id, { onDelete: "cascade" })
     .notNull(),
-  type: promptLevelEnum("type").notNull(),
-  frequency: integer("frequency").default(0).notNull(),
+  promptType: promptLevelEnum("prompt_type").notNull(),
+  frequency: integer("frequency").default(0),
+  targetSkill: varchar("target_skill", { length: 255 }),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+/**
+ * Define activity prompt relations
+ */
+export const activityPromptsRelations = relations(
+  activityPrompts,
+  ({ one }) => ({
+    activity: one(activities, {
+      fields: [activityPrompts.activityId],
+      references: [activities.id],
+    }),
+  }),
+);
 
 // Types for TypeScript type inference
 export type ActivityPrompt = typeof activityPrompts.$inferSelect;
@@ -26,7 +48,7 @@ export type ActivityPromptInsert = typeof activityPrompts.$inferInsert;
 // Zod schemas for validation
 export const insertActivityPromptSchema = createInsertSchema(activityPrompts, {
   activityId: z.string().uuid(),
-  type: z.enum([
+  promptType: z.enum([
     "Independent",
     "Verbal",
     "Gestural",
@@ -34,89 +56,76 @@ export const insertActivityPromptSchema = createInsertSchema(activityPrompts, {
     "Partial Physical",
     "Full Physical",
   ]),
-  frequency: z.number().int().min(0).optional(),
+  frequency: z.number().int().nonnegative().optional(),
+  targetSkill: z.string().max(255).optional().nullable(),
   notes: z.string().optional().nullable(),
+}).omit({ id: true, createdAt: true, updatedAt: true });
+
+export const selectActivityPromptSchema = createSelectSchema(activityPrompts, {
+  id: z.string().uuid(),
+  activityId: z.string().uuid(),
+  promptType: z.string(),
+  frequency: z.number(),
+  targetSkill: z.string().nullable(),
+  notes: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
 });
 
-export const selectActivityPromptSchema = createSelectSchema(activityPrompts);
-
-// Common prompt types (hierarchical order from least to most intrusive)
-export const PROMPT_TYPES = [
-  "Independent", // No prompt needed
-  "Natural Cue", // Environmental or situational cue
-  "Indirect Verbal", // Indirect hint or question
-  "Direct Verbal", // Clear verbal instruction
-  "Gestural", // Pointing, nodding, or other gesture
-  "Visual", // Picture, written instruction, or other visual aid
-  "Model", // Demonstrating the desired behavior
-  "Partial Physical", // Light physical guidance
-  "Full Physical", // Hand-over-hand assistance
-] as const;
+// Helper text to explain prompt hierarchy (least to most intrusive)
+export const PROMPT_HIERARCHY_DESCRIPTION = `
+Prompts are listed from least to most intrusive:
+1. Independent - No prompt needed
+2. Verbal - Spoken instructions or hints
+3. Gestural - Pointing, nodding, or other non-verbal cues
+4. Model - Demonstrating the desired behavior
+5. Partial Physical - Light physical guidance
+6. Full Physical - Hand-over-hand assistance
+`;
 
 /**
- * Helper function to get the prompt hierarchy level (lower is less intrusive)
- * @param promptType The prompt type to check
- * @returns Numeric level in the prompt hierarchy, -1 if not found
+ * Helper function to categorize prompt level by intrusiveness
+ * @param promptType The type of prompt
+ * @returns A categorization of intrusiveness level
  */
-export function getPromptHierarchyLevel(promptType: string): number {
-  return PROMPT_TYPES.findIndex((p) => p === promptType);
-}
+export function categorizePromptIntrusiveness(
+  promptType: string | null | undefined,
+): string {
+  if (!promptType) return "Unknown";
 
-/**
- * Helper function to get a less intrusive prompt type (for prompt fading)
- * @param currentPrompt The current prompt type
- * @returns The next less intrusive prompt type, or null if already at independent
- */
-export function getLessIntrusivePrompt(currentPrompt: string): string | null {
-  const currentLevel = getPromptHierarchyLevel(currentPrompt);
-
-  if (currentLevel <= 0 || currentLevel === -1) {
-    return null;
+  switch (promptType) {
+    case "Independent":
+      return "None";
+    case "Verbal":
+    case "Gestural":
+      return "Low";
+    case "Model":
+      return "Moderate";
+    case "Partial Physical":
+    case "Full Physical":
+      return "High";
+    default:
+      return "Unknown";
   }
-
-  return PROMPT_TYPES[currentLevel - 1] || null;
 }
 
 /**
- * Helper function to get a more intrusive prompt type (if current prompt is ineffective)
- * @param currentPrompt The current prompt type
- * @returns The next more intrusive prompt type, or null if already at most intrusive
- */
-export function getMoreIntrusivePrompt(currentPrompt: string): string | null {
-  const currentLevel = getPromptHierarchyLevel(currentPrompt);
-
-  if (currentLevel === -1 || currentLevel === PROMPT_TYPES.length - 1) {
-    return null;
-  }
-
-  return PROMPT_TYPES[currentLevel + 1] || null;
-}
-
-/**
- * Helper function to summarize prompt usage for an activity
- * @param prompts Array of activity prompts
- * @returns Summary string of prompt usage
+ * Helper function to generate a prompt usage summary
+ * @param prompt The activity prompt record
+ * @returns Formatted summary string
  */
 export function summarizePromptUsage(
-  prompts: Pick<ActivityPrompt, "type" | "frequency">[],
+  prompt: Pick<ActivityPrompt, "promptType" | "frequency" | "targetSkill">,
 ): string {
-  if (!prompts.length) {
-    return "No prompts recorded for this activity";
+  let summary = `Prompt: ${prompt.promptType}`;
+
+  if (prompt.frequency && prompt.frequency > 0) {
+    summary += ` | Used ${prompt.frequency} times`;
   }
 
-  // Sort by hierarchy level (least to most intrusive)
-  const sortedPrompts = [...prompts].sort((a, b) => {
-    return getPromptHierarchyLevel(a.type) - getPromptHierarchyLevel(b.type);
-  });
+  if (prompt.targetSkill) {
+    summary += ` | For skill: ${prompt.targetSkill}`;
+  }
 
-  const totalFrequency = sortedPrompts.reduce((sum, p) => sum + p.frequency, 0);
-
-  const promptSummary = sortedPrompts
-    .map(
-      (p) =>
-        `${p.type}: ${p.frequency} (${Math.round((p.frequency / totalFrequency) * 100)}%)`,
-    )
-    .join(", ");
-
-  return `Prompt usage: ${promptSummary}`;
+  return summary;
 }

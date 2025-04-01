@@ -1,144 +1,138 @@
-import { pgTable, uuid, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  varchar,
+  pgEnum,
+  boolean,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 import { sessions } from "./session.table";
 
+// Define enum for note categories
+export const noteCategoryEnum = pgEnum("note_category", [
+  "general",
+  "observation",
+  "progress",
+  "behavioral",
+  "communication",
+  "medical",
+  "environmental",
+  "caregiver",
+  "other",
+]);
+
 /**
- * General notes table schema for tracking additional information about a therapy session
+ * General notes table schema
+ * Represents general notes added during therapy sessions
  */
 export const generalNotes = pgTable("general_notes", {
   id: uuid("id").defaultRandom().primaryKey(),
   sessionId: uuid("session_id")
     .references(() => sessions.id, { onDelete: "cascade" })
-    .notNull()
-    .unique(), // One general notes record per session
-  sessionNotes: text("session_notes"),
-  caregiverFeedback: text("caregiver_feedback"),
-  environmentalFactors: text("environmental_factors"),
-  nextSessionFocus: text("next_session_focus"),
+    .notNull(),
+  title: varchar("title", { length: 255 }),
+  content: text("content").notNull(),
+  category: noteCategoryEnum("category").default("general"),
+  important: boolean("important").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Types for TypeScript type inference
+/**
+ * Define general notes relations
+ */
+export const generalNotesRelations = relations(generalNotes, ({ one }) => ({
+  session: one(sessions, {
+    fields: [generalNotes.sessionId],
+    references: [sessions.id],
+  }),
+}));
+
+// Types derived from the schema
 export type GeneralNote = typeof generalNotes.$inferSelect;
 export type GeneralNoteInsert = typeof generalNotes.$inferInsert;
 
 // Zod schemas for validation
 export const insertGeneralNoteSchema = createInsertSchema(generalNotes, {
   sessionId: z.string().uuid(),
-  sessionNotes: z.string().optional().nullable(),
-  caregiverFeedback: z.string().optional().nullable(),
-  environmentalFactors: z.string().optional().nullable(),
-  nextSessionFocus: z.string().optional().nullable(),
-});
+  title: z.string().max(255).optional(),
+  content: z.string().min(1),
+  category: z
+    .enum([
+      "general",
+      "observation",
+      "progress",
+      "behavioral",
+      "communication",
+      "medical",
+      "environmental",
+      "caregiver",
+      "other",
+    ])
+    .default("general"),
+  important: z.boolean().default(false),
+}).omit({ id: true, createdAt: true, updatedAt: true });
 
-export const selectGeneralNoteSchema = createSelectSchema(generalNotes, {
-  id: z.string().uuid(),
-  sessionId: z.string().uuid(),
-  sessionNotes: z.string().nullable(),
-  caregiverFeedback: z.string().nullable(),
-  environmentalFactors: z.string().nullable(),
-  nextSessionFocus: z.string().nullable(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-});
+export const selectGeneralNoteSchema = createSelectSchema(generalNotes);
 
-// Common environmental factors
-export const COMMON_ENVIRONMENTAL_FACTORS = [
-  "Noisy environment",
-  "Quiet environment",
-  "Distractions present",
-  "New setting",
-  "Familiar setting",
-  "Multiple people present",
-  "One-on-one setting",
-  "Temperature issues",
-  "Lighting issues",
-  "Limited space",
-  "Sensory triggers present",
-] as const;
+// Category descriptions for UI purposes
+export const NOTE_CATEGORY_DESCRIPTIONS: Record<string, string> = {
+  general: "General notes about the session",
+  observation: "Observations of client behavior or skills",
+  progress: "Notes about client progress",
+  behavioral: "Notes about behavioral issues or interventions",
+  communication: "Notes about communication skills or challenges",
+  medical: "Notes about medical issues or concerns",
+  environmental: "Notes about environmental factors",
+  caregiver: "Notes about caregiver interactions or feedback",
+  other: "Other miscellaneous notes",
+};
 
 /**
- * Helper function to generate a formatted general notes summary
- * @param note General notes object
- * @returns A formatted string with the general notes summary
+ * Helper function to categorize notes by importance
+ * @param notes Array of general notes
+ * @returns Object with important and non-important notes separated
  */
-export function generateGeneralNotesSummary(
-  note: Partial<GeneralNote>,
-): string {
-  const sections: string[] = [];
-
-  if (note.sessionNotes) {
-    sections.push(`Session Notes: ${note.sessionNotes}`);
-  }
-
-  if (note.caregiverFeedback) {
-    sections.push(`Caregiver Feedback: ${note.caregiverFeedback}`);
-  }
-
-  if (note.environmentalFactors) {
-    sections.push(`Environmental Factors: ${note.environmentalFactors}`);
-  }
-
-  if (note.nextSessionFocus) {
-    sections.push(`Next Session Focus: ${note.nextSessionFocus}`);
-  }
-
-  return sections.length > 0
-    ? sections.join("\n\n")
-    : "No general notes recorded for this session.";
+export function categorizeNotesByImportance(
+  notes: Pick<
+    GeneralNote,
+    "id" | "title" | "content" | "important" | "category"
+  >[],
+): {
+  importantNotes: Pick<
+    GeneralNote,
+    "id" | "title" | "content" | "important" | "category"
+  >[];
+  standardNotes: Pick<
+    GeneralNote,
+    "id" | "title" | "content" | "important" | "category"
+  >[];
+} {
+  return {
+    importantNotes: notes.filter((note) => note.important),
+    standardNotes: notes.filter((note) => !note.important),
+  };
 }
 
 /**
- * Helper function to extract key points from session notes
- * @param sessionNotes The full session notes text
- * @param maxPoints Maximum number of key points to extract
- * @returns Array of key points extracted from the notes
+ * Helper function to create a brief summary of a note
+ * @param note The general note to summarize
+ * @param maxLength Maximum length of the summary
+ * @returns Truncated summary string
  */
-export function extractKeyPoints(
-  sessionNotes: string | null | undefined,
-  maxPoints: number = 3,
-): string[] {
-  if (!sessionNotes) {
-    return [];
-  }
+export function createNoteSummary(
+  note: Pick<GeneralNote, "title" | "content" | "category">,
+  maxLength = 100,
+): string {
+  const title = note.title || note.category;
+  const contentPreview =
+    note.content.length > maxLength
+      ? `${note.content.substring(0, maxLength)}...`
+      : note.content;
 
-  // Simple extraction based on sentence boundaries and length
-  // A more sophisticated approach could use NLP techniques
-  const sentences = sessionNotes
-    .split(/[.!?]+/) // Split by sentence-ending punctuation
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0 && s.length < 200); // Remove empty and very long sentences
-
-  if (sentences.length <= maxPoints) {
-    return sentences;
-  }
-
-  // Use heuristics to select key sentences (simplistic approach)
-  // Look for sentences with keywords that suggest importance
-  const keywordPatterns = [
-    /\b(important|significant|key|main|critical|essential|notable|fundamental)\b/i,
-    /\b(improvement|progress|regression|change|development)\b/i,
-    /\b(recommend|suggest|advise|propose)\b/i,
-    /\b(focus|goal|target|objective|aim)\b/i,
-    /\b(successful|effective|beneficial|helpful)\b/i,
-  ];
-
-  // Score sentences based on keywords
-  const scoredSentences = sentences.map((sentence) => {
-    let score = 0;
-    keywordPatterns.forEach((pattern) => {
-      if (pattern.test(sentence)) {
-        score += 1;
-      }
-    });
-    return { sentence, score };
-  });
-
-  // Sort by score and take top maxPoints
-  return scoredSentences
-    .sort((a, b) => b.score - a.score)
-    .slice(0, maxPoints)
-    .map((item) => item.sentence);
+  return `${title}: ${contentPreview}`;
 }
