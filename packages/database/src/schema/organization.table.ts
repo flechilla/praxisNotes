@@ -1,11 +1,4 @@
-import {
-  pgTable,
-  serial,
-  varchar,
-  timestamp,
-  text,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { pgTable, varchar, timestamp, text, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
