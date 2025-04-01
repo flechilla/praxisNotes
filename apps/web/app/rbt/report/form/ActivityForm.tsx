@@ -80,7 +80,7 @@ export default function ActivityForm({
         setApiError((prev) =>
           prev
             ? `${prev} Also failed to load reinforcers.`
-            : "Failed to load reinforcers. Please try again."
+            : "Failed to load reinforcers. Please try again.",
         );
       } finally {
         setLoadingReinforcers(false);
@@ -120,7 +120,7 @@ export default function ActivityForm({
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value } = e.target;
 
@@ -159,7 +159,7 @@ export default function ActivityForm({
     // For reinforcement fields
     else if (name.startsWith("reinforcement.")) {
       const reinforcementField = name.split(
-        "."
+        ".",
       )[1] as keyof ActivityReinforcement;
       setCurrentActivity({
         ...currentActivity,
@@ -193,21 +193,24 @@ export default function ActivityForm({
   const handleBehaviorChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value } = e.target;
 
     if (name === "behaviorSelect") {
-      if (value) {
-        const selectedBehavior = behaviors.find((b) => b.id === value);
-        if (selectedBehavior) {
-          setCurrentBehavior({
-            ...currentBehavior,
-            behaviorId: selectedBehavior.id,
-            behaviorName: selectedBehavior.name,
-            definition: selectedBehavior.definition,
-          });
-        }
+      const selectedBehavior = behaviors.find((b) => b.id === value);
+      if (selectedBehavior) {
+        setCurrentBehavior({
+          ...currentBehavior,
+          behaviorId: selectedBehavior.id,
+          behaviorName: selectedBehavior.name,
+        });
+      } else {
+        setCurrentBehavior({
+          ...currentBehavior,
+          behaviorId: "",
+          behaviorName: "",
+        });
       }
     } else {
       setCurrentBehavior({
@@ -265,7 +268,7 @@ export default function ActivityForm({
 
   // Handle prompt fields
   const handlePromptChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
 
@@ -294,7 +297,7 @@ export default function ActivityForm({
 
     // Check if prompt type already exists
     const existingPromptIndex = currentActivity.promptsUsed.findIndex(
-      (p) => p.type === currentPrompt.type
+      (p) => p.type === currentPrompt.type,
     );
 
     if (existingPromptIndex >= 0) {
@@ -488,16 +491,27 @@ export default function ActivityForm({
                     disabled={loadingBehaviors}
                   >
                     <option value="">Select a behavior</option>
-                    {behaviors.map((behavior) => (
-                      <option key={behavior.id} value={behavior.id}>
-                        {behavior.name}
+                    {!loadingBehaviors && behaviors && behaviors.length > 0 ? (
+                      behaviors.map((behavior) => (
+                        <option key={behavior.id} value={behavior.id}>
+                          {behavior.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>
+                        {loadingBehaviors
+                          ? "Loading behaviors..."
+                          : "No behaviors available"}
                       </option>
-                    ))}
+                    )}
                   </select>
                   {loadingBehaviors && (
                     <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
                       <LoadingSpinner size="small" />
                     </div>
+                  )}
+                  {apiError && (
+                    <p className="text-red-500 text-sm mt-1">{apiError}</p>
                   )}
                 </div>
               </div>
@@ -611,7 +625,7 @@ export default function ActivityForm({
                         {behavior.interventionUsed
                           .map((intervention) => {
                             const option = interventionTypeOptions.find(
-                              (opt) => opt.value === intervention
+                              (opt) => opt.value === intervention,
                             );
                             return option ? option.label : intervention;
                           })
@@ -714,7 +728,7 @@ export default function ActivityForm({
                     <tr key={index}>
                       <td className="px-4 py-2 text-sm text-gray-900">
                         {promptTypeOptions.find(
-                          (opt) => opt.value === prompt.type
+                          (opt) => opt.value === prompt.type,
                         )?.label || prompt.type}
                       </td>
                       <td className="px-4 py-2 text-sm text-gray-900">

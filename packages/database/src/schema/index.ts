@@ -20,6 +20,9 @@ export * from "./session.table";
 export * from "./report.table";
 export * from "./report_section.table";
 
+// Behaviors
+export * from "./behavior.table";
+
 // Session data tracking
 export * from "./skill_tracking.table";
 // Export behavior tracking items while avoiding naming conflicts

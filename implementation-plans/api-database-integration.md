@@ -85,11 +85,12 @@ Current API endpoints:
 
 #### Behaviors API
 
-- [ ] Update `apps/web/app/api/behaviors/route.ts`
-  - [ ] Replace static data with database queries
-  - [ ] Implement proper error handling
-  - [ ] Add validation for input data
-  - [ ] Update response types
+- [x] Update `apps/web/app/api/behaviors/route.ts`
+  - [x] Replace static data with database queries
+  - [x] Implement proper error handling
+  - [x] Add validation for input data
+  - [x] Update response types
+  - [x] Add behaviors table schema and migrate database
 
 #### Options API
 
@@ -173,7 +174,7 @@ Current API endpoints:
 
 ### API Routes
 
-- [ ] Modify: `apps/web/app/api/behaviors/route.ts`
+- [x] Modify: `apps/web/app/api/behaviors/route.ts`
 
   - Purpose: Update to use database operations
   - Changes: Replace static data with database queries
