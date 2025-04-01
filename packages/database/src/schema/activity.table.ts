@@ -13,7 +13,7 @@ import { relations } from "drizzle-orm";
 import { sessions } from "./session.table";
 import { activityBehaviors } from "./activity_behavior.table";
 import { activityPrompts } from "./activity_prompt.table";
-import { activityReinforcements } from "./activity_reinforcement.table";
+import { activityReinforcements } from "./activity-reinforcement.table";
 
 /**
  * Activity table schema for tracking activities performed during activity-based therapy sessions

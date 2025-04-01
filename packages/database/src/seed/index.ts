@@ -7,7 +7,7 @@ import { db } from "../client";
 import { seed, reset } from "drizzle-seed";
 import * as schema from "../schema";
 import { seedBehaviors } from "./behaviors";
-
+import { seedReinforcements } from "./reinforcements";
 // Export individual seed functions
 export { seedRoles, seedOrganizations, seedUsers, seedClients, seedSessions };
 
@@ -29,6 +29,7 @@ export async function seedAll() {
     await seedClients();
     await seedSessions();
     await seedBehaviors();
+    await seedReinforcements();
 
     console.log("✅ Database seeded successfully!");
   } catch (error) {

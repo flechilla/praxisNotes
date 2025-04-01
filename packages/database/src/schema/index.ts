@@ -74,7 +74,7 @@ export type {
   ActivityBehaviorInsert,
 } from "./activity_behavior.table";
 export * from "./activity_prompt.table";
-export * from "./activity_reinforcement.table";
+export * from "./activity-reinforcement.table";
 
 // Export enums
 export * from "../enums";

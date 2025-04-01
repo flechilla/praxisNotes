@@ -15,6 +15,13 @@
       "when": 1743515988532,
       "tag": "0001_married_steve_rogers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1743520387779,
+      "tag": "0002_bright_doorman",
+      "breakpoints": true
     }
   ]
 }
