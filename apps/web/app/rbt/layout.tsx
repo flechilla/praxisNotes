@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import React from "react";
+import { getSession } from "../../lib/auth";
+import UserMenu from "./UserMenu";
 
 export const metadata: Metadata = {
   title: "PraxisNote - RBT Dashboard",
@@ -7,11 +9,14 @@ export const metadata: Metadata = {
     "Session reporting and management for Registered Behavior Technicians",
 };
 
-export default function RBTLayout({
+export default async function RBTLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Get user session on the server
+  const session = await getSession();
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-10 bg-white border-b border-gray-200 py-4 px-6 shadow-sm">
@@ -33,12 +38,7 @@ export default function RBTLayout({
             >
               Clients
             </a>
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-600">RBT User</span>
-              <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                <span className="text-sm font-medium text-indigo-700">RU</span>
-              </div>
-            </div>
+            <UserMenu user={session?.user} />
           </nav>
         </div>
       </header>

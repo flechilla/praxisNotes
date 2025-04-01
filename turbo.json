@@ -1,7 +1,13 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
-  "globalEnv": ["ANTHROPIC_API_KEY", "DATABASE_URL"],
+  "globalEnv": [
+    "OPENAI_API_KEY",
+    "DATABASE_URL",
+    "ANTHROPIC_API_KEY",
+    "NEXTAUTH_SECRET",
+    "NEXTAUTH_URL"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
