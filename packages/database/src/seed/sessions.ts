@@ -33,20 +33,9 @@ export async function seed() {
         },
       });
 
-      // Define the type for the query result
-      type UserClientWithUser = {
-        userId: string;
-        clientId: string;
-        createdAt: Date;
-        updatedAt: Date;
-        user: User;
-      };
-
-      const userClientsWithUsers = userClientsResult as UserClientWithUser[];
-
-      const clientUsers = userClientsWithUsers
+      const clientUsers = userClientsResult
         .map((uc) => uc.user)
-        .filter((user): user is User => user !== null);
+        .filter(Boolean);
 
       if (clientUsers.length === 0) {
         continue; // Skip if no users are associated with this client

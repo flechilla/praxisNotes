@@ -1,6 +1,7 @@
 import { pgTable, timestamp, uuid, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 import { clients } from "./client.table";
 import { users } from "./user.table";
 
@@ -42,3 +43,17 @@ export const insertUserClientSchema = createInsertSchema(userClients, {
 }).omit({ createdAt: true, updatedAt: true });
 
 export const selectUserClientSchema = createSelectSchema(userClients);
+
+/**
+ * Define user-client relations
+ */
+export const userClientsRelations = relations(userClients, ({ one }) => ({
+  user: one(users, {
+    fields: [userClients.userId],
+    references: [users.id],
+  }),
+  client: one(clients, {
+    fields: [userClients.clientId],
+    references: [clients.id],
+  }),
+}));

@@ -61,7 +61,10 @@ export const sessionsRelations = relations(sessions, ({ one, many }) => ({
   behaviorTrackings: many(behaviorTrackings),
   reinforcements: many(reinforcements),
   activities: many(activities),
-  initialStatus: one(initialStatuses),
+  initialStatus: one(initialStatuses, {
+    fields: [sessions.id],
+    references: [initialStatuses.sessionId],
+  }),
   generalNotes: many(generalNotes),
 }));
 
