@@ -1,11 +1,13 @@
 import { NextRequest } from "next/server";
-import { skillPrograms, skillTargets } from "../../../lib/mocks/skillsData";
 import {
   createSuccessResponse,
   withApiMiddleware,
   validateQuery,
   z,
 } from "../../../lib/api";
+import { db } from "@praxisnotes/database";
+import { skills } from "@praxisnotes/database";
+import { eq } from "drizzle-orm";
 
 // Schema for validating query parameters
 const getSkillsQuerySchema = z.object({
@@ -22,19 +24,29 @@ async function getHandler(request: NextRequest) {
 
   const { programId } = queryResult.data;
 
-  // Simulate database operation delay
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  try {
+    // If programId is provided, return skills for that program
+    if (programId) {
+      const skillTargets = await db.query.skills.findMany({
+        where: eq(skills.program, programId),
+      });
 
-  // Return data based on query parameters
-  if (programId) {
-    // If programId is provided, return targets for that program
-    const targets = skillTargets.filter(
-      (target) => target.programId === programId,
-    );
-    return createSuccessResponse({ targets });
-  } else {
-    // If no programId is provided, return all programs
-    return createSuccessResponse({ programs: skillPrograms });
+      return createSuccessResponse({ targets: skillTargets });
+    } else {
+      // If no programId is provided, return all distinct programs
+      const skillPrograms = await db
+        .select({
+          id: skills.program,
+          name: skills.program,
+        })
+        .from(skills)
+        .groupBy(skills.program);
+
+      return createSuccessResponse({ programs: skillPrograms });
+    }
+  } catch (error) {
+    console.error("Error fetching skills data:", error);
+    throw error;
   }
 }
 

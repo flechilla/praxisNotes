@@ -4,20 +4,6 @@ import { Skill } from "../skills/skill.type";
 import { ActivitiesFormData } from "../activity";
 
 /**
- * Client information specific to session forms
- * @deprecated - Use proper Client type from client.type.ts and extend as needed
- */
-export type ClientInfo = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  dob: string;
-  guardian: string;
-  diagnosis: string;
-  provider: string;
-};
-
-/**
  * Session form types are organized into sections.
  * Each section represents a logical grouping of data in the session form.
  */

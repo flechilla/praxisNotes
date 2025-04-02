@@ -50,7 +50,8 @@ export type NewClient = typeof clients.$inferInsert;
 
 // Zod schemas for validation
 export const insertClientSchema = createInsertSchema(clients, {
-  name: z.string().min(1).max(255),
+  firstName: z.string().min(1).max(255),
+  lastName: z.string().min(1).max(255),
   email: z.string().email().optional(),
   phone: z.string().optional(),
   address: z.string().optional(),

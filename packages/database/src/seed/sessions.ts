@@ -85,8 +85,8 @@ export async function seed() {
               sessionId: session.id,
               userId: randomUser.id,
               clientId: client.id,
-              summary: `Session summary for ${client.name} on ${sessionDate.toLocaleDateString()}`,
-              fullContent: `Detailed notes for the session with ${client.name} on ${sessionDate.toLocaleDateString()}. 
+              summary: `Session summary for ${client.firstName} ${client.lastName} on ${sessionDate.toLocaleDateString()}`,
+              fullContent: `Detailed notes for the session with ${client.firstName} ${client.lastName} on ${sessionDate.toLocaleDateString()}. 
 This session focused on behavior management and skill development.`,
               status: "draft",
             });

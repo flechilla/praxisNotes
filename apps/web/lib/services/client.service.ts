@@ -1,5 +1,3 @@
-import { ClientInfo } from "@praxisnotes/types/src/SessionForm";
-import { DBClient } from "../types/Client";
 import {
   adaptDBClientToClientInfo,
   adaptDBClientsToClientInfo,
@@ -43,7 +41,7 @@ export class ClientService {
    * Get all clients
    * @returns Array of database client objects
    */
-  static async getAllClients(): Promise<DBClient[]> {
+  static async getAllClients(): Promise<Client[]> {
     // If running on the server (in API route)
     if (typeof window === "undefined") {
       return withDb(async () => {
@@ -82,9 +80,9 @@ export class ClientService {
    * Get all clients in ClientInfo format
    * @returns Array of clients in ClientInfo format
    */
-  static async getAllClientInfos(): Promise<ClientInfo[]> {
+  static async getAllClientInfos(): Promise<Client[]> {
     const dbClients = await this.getAllClients();
-    return adaptDBClientsToClientInfo(dbClients);
+    return dbClients;
   }
 
   /**
@@ -92,7 +90,7 @@ export class ClientService {
    * @param id Client ID
    * @returns Client data or null if not found
    */
-  static async getClientById(id: string): Promise<DBClient | null> {
+  static async getClientById(id: string): Promise<Client | null> {
     // If running on the server (in API route)
     if (typeof window === "undefined") {
       return await withDb(async () => {
@@ -106,7 +104,7 @@ export class ClientService {
           return null;
         }
 
-        return result[0] as DBClient;
+        return result[0] as Client;
       });
     }
 
@@ -138,10 +136,10 @@ export class ClientService {
    * @param id Client ID
    * @returns ClientInfo formatted data
    */
-  static async getClientInfoById(id: string): Promise<ClientInfo | null> {
+  static async getClientInfoById(id: string): Promise<Client | null> {
     const client = await this.getClientById(id);
     if (!client) return null;
 
-    return adaptDBClientToClientInfo(client);
+    return client;
   }
 }
