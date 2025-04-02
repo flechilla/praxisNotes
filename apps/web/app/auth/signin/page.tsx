@@ -11,8 +11,8 @@ function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
-    email: "",
-    password: "",
+    email: "admin@example.com",
+    password: "password123",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

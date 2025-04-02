@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { anthropic } from "@ai-sdk/anthropic";
+import { openai } from "@ai-sdk/openai";
 import { streamText, createDataStreamResponse } from "ai";
 import {
   createNarrativeReportPrompt,
@@ -293,7 +294,7 @@ async function postHandler(request: NextRequest) {
         dataStream.writeData({ reportMetadata });
 
         const result = streamText({
-          model: anthropic("claude-3-7-sonnet-20250219"),
+          model: openai("gpt-4o-mini"),
           prompt,
 
           onFinish: async (result) => {
