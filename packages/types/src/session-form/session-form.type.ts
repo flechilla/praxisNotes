@@ -1,7 +1,7 @@
 import { Behavior } from "../behavior/behavior.type";
 import { Reinforcement } from "../reinforcement/reinforcement.type";
 import { Skill } from "../skills/skill.type";
-import { ActivitiesFormData } from "../activity";
+import { ActivitiesFormData, NewActivitiesFormData } from "../activity";
 
 /**
  * Session form types are organized into sections.
@@ -68,6 +68,13 @@ export type SessionFormData = {
   basicInfo: BasicInfoFormData;
   initialStatus: InitialStatusFormData;
   activities: ActivitiesFormData;
+  generalNotes: GeneralNotesFormData;
+};
+
+export type NewSessionFormData = {
+  basicInfo: BasicInfoFormData;
+  initialStatus: InitialStatusFormData;
+  activities: NewActivitiesFormData;
   generalNotes: GeneralNotesFormData;
 };
 

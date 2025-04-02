@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, withDb } from "../../../lib/db";
-import {
-  createApiResponse,
-  withErrorHandling,
-  handleApiError,
-} from "../../../lib/errors";
-import { eq, ilike, or, sql } from "drizzle-orm";
+import { createApiResponse, withErrorHandling } from "../../../lib/errors";
+import { eq, ilike, or } from "drizzle-orm";
 import { ApiError, ErrorCode } from "@praxisnotes/types";
 
 // Direct import from behavior table since it may not be exported from index

@@ -33,9 +33,10 @@ export type ActivityPrompt = {
  */
 export type NewActivityPrompt = Omit<
   ActivityPrompt,
-  "id" | "createdAt" | "updatedAt"
+  "id" | "createdAt" | "updatedAt" | "activityId"
 > & {
   id?: string;
+  activityId?: string;
 };
 
 /**

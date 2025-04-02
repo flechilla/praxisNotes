@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense, useRef } from "react";
 import { useChat } from "@ai-sdk/react";
 import ReactMarkdown from "react-markdown";
-import { SessionFormData } from "@praxisnotes/types";
+import { NewSessionFormData } from "@praxisnotes/types";
 import QuillEditor, {
   QuillEditorHandle,
 } from "../../../../components/ui/QuillEditor";
@@ -23,7 +23,7 @@ type ReportMetadata = {
 };
 
 type ReportGenerationProps = {
-  formData: SessionFormData;
+  formData: NewSessionFormData;
   onBack?: () => void;
   onReset?: () => void;
   onSubmit?: () => void;

@@ -33,7 +33,7 @@ export default function RBTDashboard() {
 
         const { data } = await response.json();
         // Transform date strings to Date objects
-        const clientsWithDates = data.map((client: any) => ({
+        const clientsWithDates = data.map((client: Client) => ({
           ...client,
           createdAt: new Date(client.createdAt),
           updatedAt: new Date(client.updatedAt),

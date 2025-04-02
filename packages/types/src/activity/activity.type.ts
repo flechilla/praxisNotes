@@ -70,3 +70,7 @@ export type UpdateActivity = Partial<Omit<Activity, "id">> & {
 export type ActivitiesFormData = {
   activities: ActivityWithRelations[];
 };
+
+export type NewActivitiesFormData = {
+  activities: NewActivity[];
+};

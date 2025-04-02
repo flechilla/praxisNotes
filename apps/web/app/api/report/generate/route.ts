@@ -1,11 +1,7 @@
 import { NextRequest } from "next/server";
-import { anthropic } from "@ai-sdk/anthropic";
 import { openai } from "@ai-sdk/openai";
 import { streamText, createDataStreamResponse } from "ai";
-import {
-  createNarrativeReportPrompt,
-  createLegacyReportPrompt,
-} from "../../../../lib/prompts/sessionReport";
+import { createNarrativeReportPrompt } from "../../../../lib/prompts/sessionReport";
 import { ClientService } from "../../../../lib/services/client.service";
 import { SessionService } from "../../../../lib/services/session.service";
 import { ReportService } from "../../../../lib/services/report.service";
@@ -14,7 +10,6 @@ import {
   activities,
   activityBehaviors,
   activityPrompts,
-  activityReinforcements,
   initialStatuses,
   generalNotes,
   activitySkills,

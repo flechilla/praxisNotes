@@ -24,9 +24,10 @@ export type ActivityBehavior = {
  */
 export type NewActivityBehavior = Omit<
   ActivityBehavior,
-  "id" | "createdAt" | "updatedAt"
+  "id" | "createdAt" | "updatedAt" | "activityId"
 > & {
   id?: string;
+  activityId?: string;
 };
 
 /**

@@ -1,7 +1,3 @@
-import {
-  adaptDBClientToClientInfo,
-  adaptDBClientsToClientInfo,
-} from "../adapters/client.adapter";
 import { Client } from "@praxisnotes/types";
 
 // Server-side imports - only used in API routes

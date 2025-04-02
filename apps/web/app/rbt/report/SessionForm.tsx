@@ -4,14 +4,10 @@ import React, { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   SessionFormData,
-  FormStep,
-  ActivityBasedSessionFormData,
   ActivityBasedFormStep,
-} from "@praxisnotes/types/src/SessionForm";
+  NewSessionFormData,
+} from "@praxisnotes/types";
 import BasicInfo from "./form/BasicInfo";
-import SkillAcquisition from "./form/SkillAcquisition";
-import BehaviorTracking from "./form/BehaviorTracking";
-import Reinforcement from "./form/Reinforcement";
 import GeneralNotes from "./form/GeneralNotes";
 import ReportGeneration from "./form/ReportGeneration";
 import InitialStatus from "./form/InitialStatus";
@@ -25,10 +21,6 @@ export default function SessionForm() {
   const searchParams = useSearchParams();
   // Ensure clientIdParam is always a string, never undefined
   const clientIdParam = (searchParams?.get("clientId") || "") as string;
-
-  // State for tracking form submission
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Initialize form state with default values for legacy flow
   const [formData, setFormData] = useState<SessionFormData>({
@@ -58,7 +50,7 @@ export default function SessionForm() {
 
   // Initialize form state for activity-based tracking
   const [activityBasedFormData, setActivityBasedFormData] =
-    useState<ActivityBasedSessionFormData>({
+    useState<NewSessionFormData>({
       basicInfo: {
         clientId: clientIdParam || "c4", // Default to Brandon Morris if no ID provided
         sessionDate: String(new Date().toISOString().split("T")[0]),
@@ -185,7 +177,7 @@ export default function SessionForm() {
 
   // Manage the current step of the form based on which flow is active
   const [currentLegacyStep, setCurrentLegacyStep] =
-    useState<FormStep>("basicInfo");
+    useState<ActivityBasedFormStep>("basicInfo");
   const [currentActivityStep, setCurrentActivityStep] =
     useState<ActivityBasedFormStep>("basicInfo");
 
@@ -193,30 +185,6 @@ export default function SessionForm() {
   const currentStep = USE_ACTIVITY_BASED_FLOW
     ? currentActivityStep
     : currentLegacyStep;
-
-  // Handle moving to the next step for the legacy flow
-  const handleLegacyNext = () => {
-    switch (currentLegacyStep) {
-      case "basicInfo":
-        setCurrentLegacyStep("skillAcquisition");
-        break;
-      case "skillAcquisition":
-        setCurrentLegacyStep("behaviorTracking");
-        break;
-      case "behaviorTracking":
-        setCurrentLegacyStep("reinforcement");
-        break;
-      case "reinforcement":
-        setCurrentLegacyStep("generalNotes");
-        break;
-      case "generalNotes":
-        setCurrentLegacyStep("reportGeneration" as FormStep);
-        break;
-    }
-
-    // Scroll to top after step change
-    window.scrollTo(0, 0);
-  };
 
   // Handle moving to the next step for the activity-based flow
   const handleActivityNext = () => {
@@ -240,33 +208,7 @@ export default function SessionForm() {
   };
 
   // Get the appropriate "next" handler
-  const handleNext = USE_ACTIVITY_BASED_FLOW
-    ? handleActivityNext
-    : handleLegacyNext;
-
-  // Handle moving to the previous step for the legacy flow
-  const handleLegacyBack = () => {
-    switch (currentLegacyStep) {
-      case "skillAcquisition":
-        setCurrentLegacyStep("basicInfo");
-        break;
-      case "behaviorTracking":
-        setCurrentLegacyStep("skillAcquisition");
-        break;
-      case "reinforcement":
-        setCurrentLegacyStep("behaviorTracking");
-        break;
-      case "generalNotes":
-        setCurrentLegacyStep("reinforcement");
-        break;
-      case "reportGeneration":
-        setCurrentLegacyStep("generalNotes");
-        break;
-    }
-
-    // Scroll to top after step change
-    window.scrollTo(0, 0);
-  };
+  const handleNext = handleActivityNext;
 
   // Handle moving to the previous step for the activity-based flow
   const handleActivityBack = () => {
@@ -290,9 +232,7 @@ export default function SessionForm() {
   };
 
   // Get the appropriate "back" handler
-  const handleBack = USE_ACTIVITY_BASED_FLOW
-    ? handleActivityBack
-    : handleLegacyBack;
+  const handleBack = handleActivityBack;
 
   // Reset the form and start over
   const handleReset = () => {
@@ -494,67 +434,6 @@ export default function SessionForm() {
     setActivityBasedFormData((prev) => ({ ...prev, activities: data }));
   };
 
-  // Render the current step based on the active flow
-  const renderLegacyStep = () => {
-    switch (currentLegacyStep) {
-      case "basicInfo":
-        return (
-          <BasicInfo
-            data={formData.basicInfo}
-            updateData={updateBasicInfo}
-            onNext={handleNext}
-          />
-        );
-      case "skillAcquisition":
-        return (
-          <SkillAcquisition
-            data={formData.skillAcquisition}
-            updateData={updateSkillAcquisition}
-            onNext={handleNext}
-            onBack={handleBack}
-          />
-        );
-      case "behaviorTracking":
-        return (
-          <BehaviorTracking
-            data={formData.behaviorTracking}
-            updateData={updateBehaviorTracking}
-            onNext={handleNext}
-            onBack={handleBack}
-          />
-        );
-      case "reinforcement":
-        return (
-          <Reinforcement
-            data={formData.reinforcement}
-            updateData={updateReinforcement}
-            onNext={handleNext}
-            onBack={handleBack}
-          />
-        );
-      case "generalNotes":
-        return (
-          <GeneralNotes
-            data={formData.generalNotes}
-            updateData={updateGeneralNotes}
-            onNext={handleNext}
-            onBack={handleBack}
-          />
-        );
-      case "reportGeneration":
-        return (
-          <ReportGeneration
-            formData={formData}
-            onBack={handleBack}
-            onReset={handleReset}
-            isActivityBased={false}
-          />
-        );
-      default:
-        return null;
-    }
-  };
-
   // Render the current step for activity-based flow
   const renderActivityStep = () => {
     switch (currentActivityStep) {
@@ -650,41 +529,7 @@ export default function SessionForm() {
             ) : (
               // Legacy flow steps
               <>
-                <div
-                  className={`step ${currentLegacyStep === "basicInfo" ? "active" : ""} 
-                    ${["skillAcquisition", "behaviorTracking", "reinforcement", "generalNotes", "reportGeneration"].includes(currentLegacyStep) ? "completed" : ""}`}
-                >
-                  Basic Info
-                </div>
-                <div
-                  className={`step ${currentLegacyStep === "skillAcquisition" ? "active" : ""} 
-                    ${["behaviorTracking", "reinforcement", "generalNotes", "reportGeneration"].includes(currentLegacyStep) ? "completed" : ""}`}
-                >
-                  Skills
-                </div>
-                <div
-                  className={`step ${currentLegacyStep === "behaviorTracking" ? "active" : ""} 
-                    ${["reinforcement", "generalNotes", "reportGeneration"].includes(currentLegacyStep) ? "completed" : ""}`}
-                >
-                  Behaviors
-                </div>
-                <div
-                  className={`step ${currentLegacyStep === "reinforcement" ? "active" : ""} 
-                    ${["generalNotes", "reportGeneration"].includes(currentLegacyStep) ? "completed" : ""}`}
-                >
-                  Reinforcement
-                </div>
-                <div
-                  className={`step ${currentLegacyStep === "generalNotes" ? "active" : ""} 
-                    ${["reportGeneration"].includes(currentLegacyStep) ? "completed" : ""}`}
-                >
-                  Notes
-                </div>
-                <div
-                  className={`step ${currentLegacyStep === "reportGeneration" ? "active" : ""}`}
-                >
-                  Report
-                </div>
+                <div>Legacy Flow</div>
               </>
             )}
           </div>
@@ -692,7 +537,7 @@ export default function SessionForm() {
       </div>
 
       {/* Render current step based on active flow */}
-      {USE_ACTIVITY_BASED_FLOW ? renderActivityStep() : renderLegacyStep()}
+      {renderActivityStep()}
 
       <style jsx>{`
         .step {

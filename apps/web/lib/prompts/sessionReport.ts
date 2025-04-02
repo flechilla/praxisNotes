@@ -1,7 +1,5 @@
 import {
   SessionFormData,
-  ActivityBasedSessionFormData,
-  Activity,
   ActivityBehavior,
   ActivityPrompt,
   ActivityWithRelations,
@@ -32,7 +30,7 @@ SESSION INFORMATION:
 
 // Function to generate the initial status section of the prompt
 const generateInitialStatusSection = (
-  initialStatus: ActivityBasedSessionFormData["initialStatus"],
+  initialStatus: SessionFormData["initialStatus"],
 ) => {
   return `
 CLIENT INITIAL STATUS:
@@ -99,7 +97,7 @@ ${activity.reinforcement.notes ? `- Notes: ${activity.reinforcement.notes}` : ""
 
 // Function to generate the activities section of the prompt
 const generateActivitiesSection = (
-  activities: ActivityBasedSessionFormData["activities"],
+  activities: SessionFormData["activities"],
 ) => {
   return `
 ACTIVITIES:
