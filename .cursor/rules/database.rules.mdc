@@ -1,0 +1,268 @@
+---
+description: Database Usage Guidelines
+globs: 
+alwaysApply: false
+---
+## Overview
+
+This document outlines best practices and patterns for working with the PraxisNotes database package. The project uses Drizzle ORM with PostgreSQL via Supabase.
+
+## Database Architecture
+
+- **Database Package**: `@praxisnotes/database`
+- **ORM**: Drizzle ORM
+- **Database**: PostgreSQL (hosted on Supabase)
+- **Schema Structure**: Located in `packages/database/src/schema/`
+- **Error Handling**: Custom `DatabaseError` class with standardized error codes
+
+## Key Entities
+
+1. **Organizations**: Business entities using the system
+2. **Users**: Individuals with access to the system
+3. **Clients**: Clients belonging to organizations
+4. **Sessions**: Therapy sessions
+5. **Reports**: Documentation of client progress
+6. **Behaviors**: Tracked behaviors
+7. **Activities**: Therapy activities
+8. **Reinforcements**: Positive reinforcement tools
+
+## Importing Database Components
+
+### Client Import
+
+```typescript
+// In API routes or server components
+import { db, withDb } from "../lib/db";
+```
+
+### Schema Import
+
+```typescript
+// Import specific schema tables
+import { users, organizations, clients } from "@praxisnotes/database";
+
+// Import schemas from specific files if needed
+import { users } from "@praxisnotes/database/schema/user.table";
+```
+
+### Operators Import
+
+```typescript
+// Import Drizzle operators for queries
+import { eq, ilike, or, and, desc } from "drizzle-orm";
+```
+
+## Database Operations
+
+### Basic Queries
+
+Always wrap database operations in the `withDb` helper function for consistent error handling:
+
+```typescript
+import { db, withDb } from "../lib/db";
+import { users } from "@praxisnotes/database";
+import { eq } from "drizzle-orm";
+
+const result = await withDb(async () => {
+  return await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+});
+```
+
+### Transactions
+
+Use `withTransaction` for operations that need to be atomic:
+
+```typescript
+import { withTransaction } from "../lib/db";
+
+const result = await withTransaction(async () => {
+  // Multiple database operations that should be committed together
+  // or rolled back if any fail
+});
+```
+
+### Query Patterns
+
+#### Select Queries
+
+```typescript
+// Basic select with conditions
+const users = await db
+  .select()
+  .from(userTable)
+  .where(eq(userTable.isActive, true))
+  .orderBy(desc(userTable.createdAt))
+  .limit(10);
+
+// Select with relations
+const usersWithOrgs = await db.query.users.findMany({
+  where: (user, { eq }) => eq(user.isActive, true),
+  with: {
+    organizations: true,
+  },
+});
+
+// Select specific columns
+const userEmails = await db
+  .select({ email: users.email, name: users.fullName })
+  .from(users);
+```
+
+#### Insert Operations
+
+```typescript
+// Insert a single record
+const newUser = await db.insert(users).values({
+  email: "user@example.com",
+  firstName: "John",
+  lastName: "Doe",
+}).returning();
+
+// Insert multiple records
+const newClients = await db.insert(clients).values([
+  { name: "Client 1", organizationId: orgId },
+  { name: "Client 2", organizationId: orgId },
+]).returning();
+```
+
+#### Update Operations
+
+```typescript
+// Update records
+const updatedCount = await db
+  .update(users)
+  .set({ isActive: false })
+  .where(eq(users.id, userId));
+```
+
+#### Delete Operations
+
+```typescript
+// Delete records
+const deletedCount = await db
+  .delete(users)
+  .where(eq(users.id, userId));
+```
+
+## Validation with Zod
+
+Use the provided Zod schemas for input validation:
+
+```typescript
+import { insertUserSchema } from "@praxisnotes/database";
+
+// In a route handler
+try {
+  insertUserSchema.parse({
+    email: body.email,
+    firstName: body.firstName,
+    lastName: body.lastName,
+  });
+  // Proceed with valid data
+} catch (error) {
+  // Handle validation error
+}
+```
+
+## Error Handling
+
+Always use proper error handling with database operations:
+
+```typescript
+try {
+  const result = await withDb(async () => {
+    // Database operations
+  });
+} catch (error) {
+  if (error instanceof DatabaseError) {
+    console.error(`Database error: ${error.code}`, error.details);
+    // Handle based on error.code
+  } else {
+    console.error("Unexpected error:", error);
+  }
+}
+```
+
+## Working with Dates
+
+When working with dates from the database:
+
+```typescript
+// Convert string dates to Date objects
+const formattedData = dbData.map((item) => ({
+  ...item,
+  createdAt: new Date(item.createdAt),
+  updatedAt: new Date(item.updatedAt),
+}));
+```
+
+## Client-Side vs. Server-Side
+
+### Server-Side Operations
+
+Use direct database access only in:
+- API routes
+- Server components
+- Server actions
+
+```typescript
+// Server-side conditional import pattern
+if (typeof window === "undefined") {
+  // Server-side code with database access
+}
+```
+
+### Client-Side Data Fetching
+
+Client components should fetch data through API routes:
+
+```typescript
+// In client components or pages
+const fetchData = async () => {
+  const response = await fetch("/api/resource");
+  if (!response.ok) {
+    throw new Error("Failed to fetch");
+  }
+  return await response.json();
+};
+```
+
+## Type Safety
+
+Always use typed variables and functions:
+
+```typescript
+import { Client } from "@praxisnotes/database";
+
+// Function with explicit return type
+async function getClient(id: string): Promise<Client | null> {
+  // Implementation
+}
+```
+
+## Health Checks
+
+Use the provided health check function for monitoring:
+
+```typescript
+import { checkDbHealth } from "../lib/db";
+
+const isHealthy = await checkDbHealth();
+```
+
+## Best Practices
+
+1. **Always use `withDb` or `withTransaction` helpers** for error handling
+2. **Keep queries concise and focused** on specific tasks
+3. **Use appropriate indexes** for frequent query patterns
+4. **Validate input data** with Zod schemas before database operations
+5. **Handle transaction boundaries** carefully
+6. **Use parameterized queries** to prevent SQL injection
+7. **Add proper constraints** when defining table relationships
+8. **Include appropriate logging** for debugging database issues
+9. **Properly close connections** in long-running scripts
+10. **Use consistent naming conventions** in schema definitions 
