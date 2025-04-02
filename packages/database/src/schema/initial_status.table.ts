@@ -3,17 +3,10 @@ import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 import { sessions } from "./session.table";
-import {
-  moodEnum,
-  MOOD,
-  MOOD_VALUES,
-  MOOD_EMOJI_MAP,
-} from "../enums/mood.enum";
+import { moodEnum, MOOD_VALUES, MOOD_EMOJI_MAP } from "../enums/mood.enum";
 import {
   attentionLevelEnum,
-  ATTENTION_LEVEL,
   ATTENTION_LEVEL_VALUES,
-  ATTENTION_LEVEL_DESCRIPTIONS,
 } from "../enums/attention-level.enum";
 
 /**

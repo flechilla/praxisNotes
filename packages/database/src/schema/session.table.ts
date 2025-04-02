@@ -11,7 +11,6 @@ import { relations } from "drizzle-orm";
 import { clients } from "./client.table";
 import { users } from "./user.table";
 import { reports } from "./report.table";
-import { activitySkills } from "./activity-skills.table";
 import { reinforcements } from "./reinforcement.table";
 import { activities } from "./activity.table";
 import { initialStatuses } from "./initial_status.table";

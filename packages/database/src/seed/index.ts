@@ -4,7 +4,7 @@ import { seed as seedUsers } from "./users";
 import { seed as seedClients } from "./clients";
 import { seed as seedSessions } from "./sessions";
 import { db } from "../client";
-import { seed, reset } from "drizzle-seed";
+import { reset } from "drizzle-seed";
 import * as schema from "../schema";
 import { seedBehaviors } from "./behaviors";
 import { seedReinforcements } from "./reinforcements";

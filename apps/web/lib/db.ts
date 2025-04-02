@@ -57,9 +57,8 @@ export async function withTransaction<T>(
   operation: () => Promise<T>,
 ): Promise<T> {
   try {
-    const result = await dbClient.transaction(async (tx: unknown) => {
+    const result = await dbClient.transaction(async () => {
       // Set the transaction context for the operation
-      const txContext: TransactionContext = { tx };
       return await operation();
     });
 

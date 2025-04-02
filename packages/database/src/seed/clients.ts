@@ -1,5 +1,5 @@
 import { db } from "../client";
-import { clients, userClients, users } from "../schema";
+import { clients, userClients } from "../schema";
 import type { User } from "../schema/user.table";
 
 /**

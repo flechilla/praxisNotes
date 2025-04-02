@@ -1,6 +1,5 @@
 import { db } from "../client";
 import { sessions, reports } from "../schema";
-import type { User } from "../schema/user.table";
 
 /**
  * Seeds the sessions table with sample sessions
