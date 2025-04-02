@@ -214,7 +214,7 @@ async function postHandler(request: NextRequest) {
     return bodyResult.response;
   }
 
-  const { formData, rbtName, isActivityBased } = bodyResult.data;
+  const { formData, rbtName } = bodyResult.data;
 
   // Get the authenticated user's ID (middleware ensures auth)
   const session = await getSession();
@@ -261,13 +261,15 @@ async function postHandler(request: NextRequest) {
       // Continue with report generation even if detailed data saving fails
     }
 
-    // Create prompt for AI based on form type
+    // Create prompt for AI - always use narrative format
     const prompt = createNarrativeReportPrompt(
       sessionFormData,
       client,
       rbtName,
       sessionDuration,
     );
+
+    console.log(prompt);
 
     // Create basic metadata for the report
     const reportMetadata: ReportMetadata = {
@@ -289,7 +291,7 @@ async function postHandler(request: NextRequest) {
         dataStream.writeData({ reportMetadata });
 
         const result = streamText({
-          model: openai("gpt-4o-mini"),
+          model: openai("gpt-4o"),
           prompt,
 
           onFinish: async (result) => {
@@ -333,8 +335,6 @@ async function postHandler(request: NextRequest) {
                   fullContent: result.text,
                 },
               );
-
-              console.log(result.text);
 
               if (savedReport) {
                 console.log(`Saved report with ID: ${savedReport.id}`);
