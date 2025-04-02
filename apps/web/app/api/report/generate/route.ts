@@ -139,6 +139,34 @@ const saveActivityBasedSessionData = async (
             frequency: prompt.count,
           });
         }
+
+        // Insert skills
+        if (activity.skills && activity.skills.length > 0) {
+          for (const skill of activity.skills) {
+            // Make sure the prompt level matches one of the enum values
+            const validPromptLevel =
+              skill.promptLevel === "Independent" ||
+              skill.promptLevel === "Verbal" ||
+              skill.promptLevel === "Gestural" ||
+              skill.promptLevel === "Model" ||
+              skill.promptLevel === "Partial Physical" ||
+              skill.promptLevel === "Full Physical"
+                ? skill.promptLevel
+                : "Independent"; // Default to Independent if not matching
+
+            await db.insert(activitySkills).values({
+              activityId: newActivity.id,
+              skillId: skill.id,
+              promptLevel: validPromptLevel,
+              trials: skill.trials || 0,
+              mastery: skill.mastery || 0,
+              correct: skill.correct || 0,
+              incorrect: skill.incorrect || 0,
+              prompted: skill.prompted || 0,
+              notes: skill.notes,
+            });
+          }
+        }
       }
     }
   } catch (error) {
@@ -185,12 +213,26 @@ const saveTraditionalSessionData = async (
     // Save skills
     for (const activity of formData.activities.activities) {
       for (const skill of activity.skills) {
+        // Make sure the prompt level matches one of the enum values
+        const validPromptLevel =
+          skill.promptLevel === "Independent" ||
+          skill.promptLevel === "Verbal" ||
+          skill.promptLevel === "Gestural" ||
+          skill.promptLevel === "Model" ||
+          skill.promptLevel === "Partial Physical" ||
+          skill.promptLevel === "Full Physical"
+            ? skill.promptLevel
+            : "Independent"; // Default to Independent if not matching
+
         await db.insert(activitySkills).values({
           activityId: activity.id,
           skillId: skill.id,
-          correct: skill.correct,
-          incorrect: skill.incorrect,
-          prompted: skill.prompted,
+          promptLevel: validPromptLevel,
+          trials: skill.trials || 0,
+          mastery: skill.mastery || 0,
+          correct: skill.correct || 0,
+          incorrect: skill.incorrect || 0,
+          prompted: skill.prompted || 0,
           notes: skill.notes,
         });
       }
@@ -212,11 +254,9 @@ const saveTraditionalSessionData = async (
           intensityMap[behavior.intensity as keyof typeof intensityMap] || null;
 
         await db.insert(activityBehaviors).values({
-          sessionId,
-          behaviorName: behavior.behaviorName,
-          definition: behavior.definition,
+          activityId: activity.id,
           intensity,
-          interventionUsed: behavior.interventionUsed,
+          interventionUsed: JSON.stringify(behavior.interventionUsed),
           interventionNotes: behavior.interventionNotes,
         });
       }

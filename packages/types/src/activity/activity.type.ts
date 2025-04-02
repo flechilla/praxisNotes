@@ -4,10 +4,16 @@
  */
 
 import { Skill } from "../skills/skill.type";
-import { ActivityBehavior } from "./activity-behavior.type";
-import { ActivityPrompt } from "./activity-prompt.type";
-import { ActivityReinforcement } from "./activity-reinforcement.type";
-import { ActivitySkill } from "./activity-skill.type";
+import {
+  ActivityBehavior,
+  NewActivityBehavior,
+} from "./activity-behavior.type";
+import { ActivityPrompt, NewActivityPrompt } from "./activity-prompt.type";
+import {
+  ActivityReinforcement,
+  NewActivityReinforcement,
+} from "./activity-reinforcement.type";
+import { ActivitySkill, NewActivitySkill } from "./activity-skill.type";
 
 /**
  * Main activity type representing a structured activity during a session
@@ -41,9 +47,10 @@ export type ActivityWithRelations = Activity & {
  */
 export type NewActivity = Omit<Activity, "id" | "createdAt" | "updatedAt"> & {
   id?: string;
-  behaviors?: ActivityBehavior[];
-  promptsUsed?: ActivityPrompt[];
-  reinforcement?: ActivityReinforcement;
+  behaviors?: NewActivityBehavior[];
+  promptsUsed?: NewActivityPrompt[];
+  reinforcement?: NewActivityReinforcement;
+  skills?: NewActivitySkill[];
 };
 
 /**
@@ -54,6 +61,7 @@ export type UpdateActivity = Partial<Omit<Activity, "id">> & {
   behaviors?: ActivityBehavior[];
   promptsUsed?: ActivityPrompt[];
   reinforcement?: ActivityReinforcement;
+  skills?: ActivitySkill[];
 };
 
 /**

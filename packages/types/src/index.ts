@@ -51,6 +51,9 @@ export type {
   UpdateActivityReinforcement,
   PromptType,
   ActivityForm,
+  ActivitySkill,
+  NewActivitySkill,
+  UpdateActivitySkill,
 } from "./activity";
 
 // NextAuth types

@@ -12,7 +12,6 @@ export type Reinforcement = {
   type: string;
   description: string | null;
   category?: string;
-  sessionId?: string;
   createdAt?: Date;
   updatedAt?: Date;
 };

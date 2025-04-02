@@ -9,7 +9,7 @@
 export type ActivityReinforcement = {
   id: string;
   activityId: string;
-  reinforcerId?: string; // Optional reference to a predefined reinforcer
+  reinforcementId?: string; // Optional reference to a predefined reinforcer
   reinforcementName: string;
   reinforcementDescription?: string;
   notes?: string;
@@ -24,7 +24,12 @@ export type ActivityReinforcement = {
  */
 export type NewActivityReinforcement = Omit<
   ActivityReinforcement,
-  "id" | "createdAt" | "updatedAt"
+  | "id"
+  | "createdAt"
+  | "updatedAt"
+  | "reinforcementName"
+  | "reinforcementDescription"
+  | "reinforcementType"
 > & {
   id?: string;
 };

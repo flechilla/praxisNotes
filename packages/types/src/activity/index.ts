@@ -11,3 +11,5 @@ export * from "./activity-reinforcement.type";
 
 // Form-specific types
 export * from "./activity-form.type";
+
+export * from "./activity-skill.type";
