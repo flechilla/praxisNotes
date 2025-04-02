@@ -10,12 +10,13 @@ export type ActivityReinforcement = {
   id: string;
   activityId: string;
   reinforcerId?: string; // Optional reference to a predefined reinforcer
-  reinforcerName: string;
-  type: string; // "social", "tangible", "token", etc.
+  reinforcementName: string;
+  reinforcementDescription?: string;
   notes?: string;
   effectiveness?: string; // "low", "moderate", "high"
   createdAt?: Date;
   updatedAt?: Date;
+  reinforcementType?: string;
 };
 
 /**

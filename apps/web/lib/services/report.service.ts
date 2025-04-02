@@ -34,8 +34,19 @@ export const ReportService = {
       // Insert report
       const [newReport] = await db
         .insert(reports)
-        .values(dbReportData)
+        .values({
+          sessionId,
+          userId,
+          clientId,
+          summary: reportData.summary || null,
+          fullContent: reportData.fullContent,
+          status: "draft" as const,
+        })
         .returning();
+
+      if (!newReport) {
+        throw new Error("Failed to create report");
+      }
 
       // Prepare sections for database
       const sections = [
@@ -51,7 +62,7 @@ export const ReportService = {
       await Promise.all(
         sections.map((section, index) => {
           return db.insert(reportSections).values({
-            reportId: newReport.id,
+            reportId: newReport?.id,
             title: section.title,
             content: section.content,
             order: index,
@@ -87,7 +98,7 @@ export const ReportService = {
       // Transform database report to application Report type
       const transformedReport: Report = {
         id: report.id,
-        clientName: `${report.client.firstName} ${report.client.lastName}`,
+        clientName: report.client.name,
         sessionDate: report.session.sessionDate.toISOString().split("T")[0],
         // This is simplified as real duration calculation needs start/end time
         sessionDuration: "N/A",

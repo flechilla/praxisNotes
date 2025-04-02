@@ -1,8 +1,8 @@
 import NextAuth from "next-auth";
-import type { NextAuthOptions } from "next-auth";
+import type { AuthSession, AuthUser, NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { db, withDb } from "../../../../lib/db";
-import { users } from "@praxisnotes/database";
+import { organizationUsers, users } from "@praxisnotes/database";
 import { eq } from "drizzle-orm";
 import { compare } from "bcryptjs";
 
@@ -21,9 +21,25 @@ export const authOptions: NextAuthOptions = {
 
         const user = await withDb(async () => {
           const [foundUser] = await db
-            .select()
+            .select({
+              id: users.id,
+              email: users.email,
+              fullName: users.fullName,
+              firstName: users.firstName,
+              lastName: users.lastName,
+              avatarUrl: users.avatarUrl,
+              passwordHash: users.passwordHash,
+              organizationId: organizationUsers.organizationId,
+              isDefault: organizationUsers.isDefault,
+            })
             .from(users)
+            .leftJoin(organizationUsers, eq(users.id, organizationUsers.userId))
             .where(eq(users.email, credentials.email.toLowerCase()))
+            .groupBy(
+              users.id,
+              organizationUsers.organizationId,
+              organizationUsers.isDefault,
+            )
             .limit(1);
           return foundUser;
         });
@@ -41,12 +57,18 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        return {
+        const authUser = {
           id: user.id,
           email: user.email,
           name: user.fullName || `${user.firstName} ${user.lastName}`.trim(),
           image: user.avatarUrl,
-        };
+          organizationId: user.organizationId,
+          isDefault: user.isDefault,
+        } as AuthUser;
+
+        console.log("authUser", authUser);
+
+        return authUser;
       },
     }),
   ],
@@ -74,12 +96,17 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      if (token && session.user) {
-        session.user.id = token.id as string;
-        session.user.organizationId = token.organizationId as string;
-        session.user.isDefaultOrg = token.isDefault as boolean;
-      }
-      return session;
+      const outputSession: AuthSession = {
+        ...session,
+        user: {
+          ...session.user,
+          id: token.id as string,
+          organizationId: token.organizationId as string,
+          isDefaultOrg: token.isDefault as boolean,
+        },
+      };
+      console.log("outputSession", outputSession);
+      return outputSession;
     },
   },
   pages: {

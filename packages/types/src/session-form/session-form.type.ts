@@ -78,7 +78,7 @@ export type InitialStatusFormData = {
  * Activity-based session form structure
  * This is the newer format that focuses on activities rather than discrete skills
  */
-export type ActivityBasedSessionFormData = {
+export type SessionFormData = {
   basicInfo: BasicInfoFormData;
   initialStatus: InitialStatusFormData;
   activities: ActivitiesFormData;

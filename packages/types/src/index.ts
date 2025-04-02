@@ -27,6 +27,9 @@ export * from "./client/client.type";
 // Reinforcement types
 export * from "./reinforcement/reinforcement.type";
 
+// Session form types
+export * from "./session-form/session-form.type";
+
 // Activity types - use explicit import to avoid naming conflicts
 export type {
   Activity,
@@ -49,3 +52,6 @@ export type {
   PromptType,
   ActivityForm,
 } from "./activity";
+
+// NextAuth types
+export * from "./next-auth/next-auth.type";

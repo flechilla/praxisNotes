@@ -3,14 +3,14 @@
  * These module augmentations extend the NextAuth default types with application-specific fields
  */
 import "next-auth";
-import { DefaultSession } from "next-auth";
+import { DefaultSession, DefaultUser } from "next-auth";
 
 declare module "next-auth" {
   /**
    * Extends the default NextAuth Session type
    * Adds user-specific fields needed across the application
    */
-  interface Session {
+  export interface AuthSession extends DefaultSession {
     user: {
       id: string;
       organizationId?: string; // Current active organization
@@ -21,7 +21,7 @@ declare module "next-auth" {
   /**
    * Extends the default NextAuth User type
    */
-  interface User {
+  export interface AuthUser extends DefaultUser {
     id: string;
     organizationId?: string;
     isDefaultOrg?: boolean;

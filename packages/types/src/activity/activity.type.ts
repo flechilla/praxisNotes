@@ -3,9 +3,11 @@
  * Types representing session activities and related data
  */
 
+import { Skill } from "../skills/skill.type";
 import { ActivityBehavior } from "./activity-behavior.type";
 import { ActivityPrompt } from "./activity-prompt.type";
 import { ActivityReinforcement } from "./activity-reinforcement.type";
+import { ActivitySkill } from "./activity-skill.type";
 
 /**
  * Main activity type representing a structured activity during a session
@@ -30,7 +32,8 @@ export type Activity = {
 export type ActivityWithRelations = Activity & {
   behaviors: ActivityBehavior[];
   promptsUsed: ActivityPrompt[];
-  reinforcement: ActivityReinforcement;
+  reinforcement: ActivityReinforcement[];
+  skills: ActivitySkill[];
 };
 
 /**

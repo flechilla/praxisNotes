@@ -10,7 +10,7 @@ import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 import { activities } from "./activity.table";
-import { promptLevelEnum } from "./skill_tracking.table";
+import { promptLevelEnum } from "./activity-skills.table";
 
 /**
  * Activity prompt table schema for tracking prompts used during specific activities
