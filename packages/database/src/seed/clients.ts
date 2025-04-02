@@ -48,7 +48,8 @@ export async function seed() {
 
       if (organization) {
         await db.insert(clients).values({
-          name,
+          firstName: name.split(" ")[0] || "Unknown",
+          lastName: name.split(" ")[1] || "Client",
           email: `${name.toLowerCase().replace(/\s+/g, ".")}@client.example.com`,
           phone: `555-${String(Math.floor(Math.random() * 900) + 100).padStart(3, "0")}-${String(Math.floor(Math.random() * 9000) + 1000).padStart(4, "0")}`,
           address: `${Math.floor(Math.random() * 9000) + 1000} Main St, Example City, EX ${String(Math.floor(Math.random() * 90000) + 10000).padStart(5, "0")}`,

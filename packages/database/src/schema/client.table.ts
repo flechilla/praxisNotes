@@ -19,7 +19,8 @@ import { reports } from "./report.table";
  */
 export const clients = pgTable("clients", {
   id: uuid("id").defaultRandom().primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
+  firstName: varchar("first_name", { length: 255 }).notNull(),
+  lastName: varchar("last_name", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }),
   phone: varchar("phone", { length: 50 }),
   address: text("address"),
