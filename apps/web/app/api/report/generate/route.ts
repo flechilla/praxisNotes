@@ -293,8 +293,9 @@ async function postHandler(request: NextRequest) {
         dataStream.writeData({ reportMetadata });
 
         const result = streamText({
-          model: anthropic("claude-3-5-sonnet-20241022"),
+          model: anthropic("claude-3-7-sonnet-20250219"),
           prompt,
+
           onFinish: async (result) => {
             // Save the report with the generated content
             try {
@@ -336,6 +337,8 @@ async function postHandler(request: NextRequest) {
                   fullContent: result.text,
                 },
               );
+
+              console.log(result.text);
 
               if (savedReport) {
                 console.log(`Saved report with ID: ${savedReport.id}`);

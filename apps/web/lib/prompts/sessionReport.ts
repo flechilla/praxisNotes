@@ -4,17 +4,15 @@ import {
   Activity,
   ActivityBehavior,
   ActivityPrompt,
-} from "@praxisnotes/types/src/SessionForm";
-import { ClientInfo } from "@praxisnotes/types/src/SessionForm";
+  ActivityWithRelations,
+} from "@praxisnotes/types";
+import { Client } from "@praxisnotes/types";
 
 // Function to generate the client information section of the prompt
-const generateClientInfoSection = (client: ClientInfo, rbtName: string) => {
+const generateClientInfoSection = (client: Client, rbtName: string) => {
   return `
 CLIENT INFORMATION:
 - Name: ${client.firstName} ${client.lastName}
-- Date of Birth: ${client.dob}
-- Diagnosis: ${client.diagnosis}
-- Guardian: ${client.guardian}
 - RBT: ${rbtName}
 `;
 };
@@ -63,7 +61,10 @@ const generatePromptDescription = (prompt: ActivityPrompt) => {
 };
 
 // Function to generate an activity description
-const generateActivityDescription = (activity: Activity, index: number) => {
+const generateActivityDescription = (
+  activity: ActivityWithRelations,
+  index: number,
+) => {
   return `
 Activity ${index + 1}: ${activity.name}
 - Description: ${activity.description}
@@ -90,7 +91,7 @@ Completion:
 ${activity.completionNotes ? `- Notes: ${activity.completionNotes}` : ""}
 
 Reinforcement:
-- Reinforcer: ${activity.reinforcement.reinforcerName}
+- Reinforcer: ${activity.reinforcement.notes}
 - Type: ${activity.reinforcement.type}
 ${activity.reinforcement.notes ? `- Notes: ${activity.reinforcement.notes}` : ""}
 `;
@@ -219,9 +220,6 @@ The report should:
 5. Include specific data about behaviors, prompts, and reinforcements within the narrative
 6. Maintain chronological flow between activities
 7. End with a brief summary of environmental factors and plans for the next session
-
-Use language like in this example:
-"BM's therapy session took place at his home, where his mother (VB) and the RBT (KX) were present. VB reported that BM had allergies; however, no changes in BM's medication were reported. When the RBT arrived at the home, BM was sitting on the sofa with his tablet. Upon seeing the RBT, he responded to her greeting after approximately five seconds."
 
 Please provide ONLY the narrative report without any section headings, metadata, or additional commentary.
 `;

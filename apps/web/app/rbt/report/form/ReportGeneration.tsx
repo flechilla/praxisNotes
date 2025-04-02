@@ -1,9 +1,17 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense, useRef } from "react";
 import { useChat } from "@ai-sdk/react";
 import ReactMarkdown from "react-markdown";
 import { SessionFormData } from "@praxisnotes/types";
+import QuillEditor, {
+  QuillEditorHandle,
+} from "../../../../components/ui/QuillEditor";
+import LoadingSpinner from "../../../../components/ui/LoadingSpinner";
+import {
+  markdownToHtml,
+  htmlToMarkdown,
+} from "../../../../utils/markdown-converter";
 
 // Define the metadata type that matches what the API returns
 type ReportMetadata = {
@@ -24,6 +32,16 @@ type ReportGenerationProps = {
   isActivityBased?: boolean;
 };
 
+// Simple fallback for the editor when loading
+function EditorFallback() {
+  return (
+    <div className="border rounded prose max-w-none min-h-[500px] p-4 bg-gray-50 animate-pulse flex items-center justify-center">
+      <LoadingSpinner size="medium" className="text-gray-400" />
+      <span className="ml-3 text-gray-500">Loading editor...</span>
+    </div>
+  );
+}
+
 export default function ReportGeneration({
   formData,
   onBack,
@@ -35,11 +53,26 @@ export default function ReportGeneration({
 }: ReportGenerationProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editableMarkdown, setEditableMarkdown] = useState<string>("");
+  const [editableHtml, setEditableHtml] = useState<string>("");
   const [reportMetadata, setReportMetadata] = useState<ReportMetadata | null>(
     null,
   );
   const [isGenerating, setIsGenerating] = useState(true);
-  const [generationProgress, setGenerationProgress] = useState(0);
+  const [isConverting, setIsConverting] = useState(false);
+  const [isBrowser, setIsBrowser] = useState(false);
+  const editorRef = useRef<QuillEditorHandle>(null);
+
+  // Check if we're running in the browser
+  useEffect(() => {
+    setIsBrowser(true);
+  }, []);
+
+  // Ensure the editor content is set correctly when in edit mode
+  useEffect(() => {
+    if (isEditMode && editorRef.current && editableHtml) {
+      editorRef.current.setContent(editableHtml);
+    }
+  }, [isEditMode, editableHtml]);
 
   // Initialize the useChat hook with the API endpoint for report generation
   const { messages, data, status, append, isLoading, error } = useChat({
@@ -52,25 +85,6 @@ export default function ReportGeneration({
     streamProtocol: "data",
     id: `report-${formData.basicInfo.clientId}-${formData.basicInfo.sessionDate}`,
   });
-
-  // Simulate progress for better UX
-  useEffect(() => {
-    if (status === "streaming" || status === "submitted" || isLoading) {
-      const interval = setInterval(() => {
-        setGenerationProgress((prev) => {
-          // Cap at 95% until generation is complete
-          if (prev < 95) {
-            return prev + Math.random() * 5;
-          }
-          return prev;
-        });
-      }, 1000);
-
-      return () => clearInterval(interval);
-    } else if (status === "ready" && !isLoading) {
-      setGenerationProgress(100);
-    }
-  }, [status, isLoading]);
 
   // Trigger the report generation when the component mounts
   useEffect(() => {
@@ -108,39 +122,92 @@ export default function ReportGeneration({
 
   // Extract markdown content from messages
   useEffect(() => {
-    if (messages && messages.length > 0) {
+    if (messages && messages.length > 0 && isGenerating === false) {
       const lastMessage = messages[messages.length - 1];
-      if (lastMessage && lastMessage.role === "assistant") {
+      if (
+        lastMessage &&
+        lastMessage.role === "assistant" &&
+        !editableMarkdown
+      ) {
+        // Only update content if we don't already have content (first load)
         setEditableMarkdown(lastMessage.content);
+
+        // Convert markdown to HTML for Quill
+        const convertToHtml = async () => {
+          setIsConverting(true);
+          try {
+            const html = await markdownToHtml(lastMessage.content);
+            setEditableHtml(html);
+          } catch (err) {
+            console.error("Failed to convert markdown to HTML:", err);
+          } finally {
+            setIsConverting(false);
+          }
+        };
+
+        convertToHtml();
       }
     }
-  }, [messages]);
+  }, [messages, isGenerating, editableMarkdown]);
 
-  // Toggle between view and edit modes
-  const toggleEditMode = () => {
-    setIsEditMode(!isEditMode);
+  // Handle Quill editor content changes
+  const handleQuillChange = async (html: string) => {
+    setEditableHtml(html);
+
+    // Convert HTML back to markdown for storage
+    try {
+      const markdown = await htmlToMarkdown(html);
+      setEditableMarkdown(markdown);
+    } catch (err) {
+      console.error("Failed to convert HTML to markdown:", err);
+    }
   };
 
-  // Handle markdown content changes in edit mode
-  const handleMarkdownChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setEditableMarkdown(e.target.value);
+  // Toggle between view and edit modes
+  const toggleEditMode = async () => {
+    setIsConverting(true);
+
+    try {
+      if (isEditMode && editorRef.current) {
+        // We're switching from edit to view mode
+        // Get latest content from editor
+        const currentHtml = editorRef.current.getContent();
+
+        // Save the HTML content
+        setEditableHtml(currentHtml);
+
+        // Convert to markdown for view mode display
+        const markdown = await htmlToMarkdown(currentHtml);
+        setEditableMarkdown(markdown);
+      } else if (!isEditMode) {
+        // We're switching from view to edit mode
+        // Make sure the editor will have the latest HTML content
+        // No need to do anything here as the editor will get content from editableHtml
+      }
+    } catch (err) {
+      console.error("Failed during mode transition:", err);
+    } finally {
+      // Toggle the mode
+      setIsEditMode(!isEditMode);
+      setIsConverting(false);
+    }
   };
 
   // Manually trigger report generation
   const handleManualGeneration = async () => {
     setIsGenerating(true);
-    setGenerationProgress(0);
   };
 
   // Determine narrative format
   const isNarrativeFormat = isActivityBased;
 
-  // Show loading state with improved progress indicator
+  // Show loading state with improved loading animation
   if (
     status === "streaming" ||
     status === "submitted" ||
     isLoading ||
-    isSubmitting
+    isSubmitting ||
+    isConverting
   ) {
     const previewContent =
       messages && messages.length > 0
@@ -150,36 +217,27 @@ export default function ReportGeneration({
     return (
       <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
         <div className="flex flex-col items-center justify-center py-8">
-          <div className="w-full max-w-lg mb-6">
-            <div className="flex justify-between mb-1">
-              <span className="text-sm font-medium text-gray-700">
-                Generating Report
-              </span>
-              <span className="text-sm font-medium text-gray-700">
-                {Math.round(generationProgress)}%
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2.5">
-              <div
-                className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300"
-                style={{ width: `${generationProgress}%` }}
-              ></div>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              {generationProgress < 30
-                ? "Analyzing session data..."
-                : generationProgress < 60
-                  ? "Structuring report content..."
-                  : generationProgress < 90
-                    ? "Finalizing report..."
-                    : "Almost done..."}
+          <div className="flex flex-col items-center justify-center mb-6">
+            <LoadingSpinner size="large" className="mb-4" />
+            <h3 className="text-xl font-medium text-gray-700">
+              {isConverting
+                ? "Preparing Editor"
+                : status === "streaming"
+                  ? "Creating your narrative..."
+                  : "Processing session data..."}
+            </h3>
+            <p className="text-gray-500 mt-2">
+              {isConverting
+                ? "Converting content format..."
+                : "This might take a few moments"}
             </p>
           </div>
 
-          {previewContent && (
+          {previewContent && !isConverting && (
             <div className="mt-4 w-full max-w-2xl bg-gray-50 p-4 rounded-lg border border-gray-200">
               <h4 className="font-medium text-gray-700 mb-2">Preview:</h4>
               <div className="text-gray-600 prose max-h-64 overflow-y-auto">
+                Preview Content
                 <ReactMarkdown>{previewContent}</ReactMarkdown>
               </div>
             </div>
@@ -387,12 +445,20 @@ export default function ReportGeneration({
 
             <div className="p-4">
               {isEditMode ? (
-                <div className="border rounded">
-                  <textarea
-                    className="w-full h-[500px] p-4 border-0 rounded font-mono text-sm focus:ring-2 focus:ring-indigo-500"
-                    value={editableMarkdown}
-                    onChange={handleMarkdownChange}
-                  />
+                <div className="prose max-w-none">
+                  {isBrowser ? (
+                    <Suspense fallback={<EditorFallback />}>
+                      <QuillEditor
+                        ref={editorRef}
+                        value={editableHtml}
+                        onChange={handleQuillChange}
+                        readOnly={false}
+                        className="min-h-[500px]"
+                      />
+                    </Suspense>
+                  ) : (
+                    <EditorFallback />
+                  )}
                 </div>
               ) : (
                 <div
