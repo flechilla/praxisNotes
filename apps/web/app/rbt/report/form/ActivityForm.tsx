@@ -2,19 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Activity,
-  ActivityWithRelations,
-  ActivityBehavior,
-  ActivityPrompt,
   ActivityReinforcement,
   NewActivitySkill,
   NewActivityBehavior,
   NewActivityPrompt,
   NewActivity,
-  Reinforcement,
-  ReinforcementOption,
+  ActivityReinforcementForm,
 } from "@praxisnotes/types";
-import { ActivitySkill } from "@praxisnotes/types";
 import {
   activityLocationOptions,
   promptTypeOptions,
@@ -22,7 +16,6 @@ import {
   behaviorIntensityOptions,
   promptLevelOptions,
 } from "../../constants/formOptions";
-import { BehaviorOption } from "../../../../lib/mocks/behaviorsData";
 import { fetchAllBehaviors } from "../../../../lib/api/behaviorsApi";
 import { fetchAllReinforcers } from "../../../../lib/api/reinforcersApi";
 import LoadingSpinner from "../../../../components/ui/LoadingSpinner";
@@ -31,11 +24,31 @@ import {
   fetchSkillPrograms,
   fetchTargetsByProgramId,
 } from "../../../../lib/api/skillsApi";
-import {
-  SkillProgramOption,
-  SkillTargetOption,
-} from "../../../../lib/mocks/skillsData";
-import { ReinforcerOption } from "../../../../lib/mocks/reinforcersData";
+
+// Define missing types
+type BehaviorOption = {
+  id: string;
+  name: string;
+  definition?: string;
+};
+
+type SkillProgramOption = {
+  id: string;
+  name: string;
+};
+
+type SkillTargetOption = {
+  id: string;
+  name: string;
+  programId: string;
+};
+
+type ReinforcementOption = {
+  id: string;
+  name: string;
+  type?: string;
+  description?: string;
+};
 
 type ActivityFormProps = {
   activity: NewActivity;
@@ -65,7 +78,18 @@ export default function ActivityForm({
   onSave,
   onCancel,
 }: ActivityFormProps) {
-  const [currentActivity, setCurrentActivity] = useState<NewActivity>(activity);
+  // Initialize with default values for all optional properties
+  const [currentActivity, setCurrentActivity] = useState<NewActivity>({
+    ...activity,
+    behaviors: activity.behaviors || [],
+    promptsUsed: activity.promptsUsed || [],
+    reinforcement: activity.reinforcement || {
+      activityId: activity.id || "",
+      reinforcerName: "",
+      type: "",
+    },
+    skills: activity.skills || [],
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // State for behavior options
@@ -232,15 +256,9 @@ export default function ActivityForm({
 
     // For basic activity properties
     if (
-      [
-        "name",
-        "description",
-        "goal",
-        "location",
-        "reinforcerName",
-        "type",
-        "notes",
-      ].includes(name)
+      ["name", "description", "goal", "location", "type", "notes"].includes(
+        name,
+      )
     ) {
       setCurrentActivity({
         ...currentActivity,
@@ -254,7 +272,7 @@ export default function ActivityForm({
     } else if (name === "duration") {
       setCurrentActivity({
         ...currentActivity,
-        duration: value ? parseInt(value) : undefined,
+        duration: value ? parseInt(value) : 0,
       });
     } else if (name === "completionNotes") {
       setCurrentActivity({
@@ -264,9 +282,7 @@ export default function ActivityForm({
     }
     // For reinforcement fields
     else if (name.startsWith("reinforcement.")) {
-      const reinforcementField = name.split(
-        ".",
-      )[1] as keyof ActivityReinforcement;
+      const reinforcementField = name.split(".")[1];
       setCurrentActivity({
         ...currentActivity,
         reinforcement: {
@@ -839,7 +855,7 @@ export default function ActivityForm({
           </div>
 
           {/* List of added behaviors */}
-          {currentActivity.behaviors.length > 0 ? (
+          {currentActivity.behaviors && currentActivity.behaviors.length > 0 ? (
             <div className="border rounded-lg overflow-hidden">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -1220,10 +1236,7 @@ export default function ActivityForm({
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Program
-                    </th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Target
+                      Skill
                     </th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Trials
@@ -1240,10 +1253,7 @@ export default function ActivityForm({
                   {currentActivity.skills.map((skill, index) => (
                     <tr key={index}>
                       <td className="px-4 py-2 text-sm text-gray-900">
-                        {skill.program}
-                      </td>
-                      <td className="px-4 py-2 text-sm text-gray-900">
-                        {skill.target}
+                        {skill.skillId}
                       </td>
                       <td className="px-4 py-2 text-sm text-gray-900">
                         {skill.trials}
@@ -1323,7 +1333,7 @@ export default function ActivityForm({
               <div className="relative">
                 <select
                   name="reinforcerSelect"
-                  value={currentActivity.reinforcement.reinforcerId || ""}
+                  value={currentActivity.reinforcement?.reinforcementId || ""}
                   onChange={handleSelectReinforcer}
                   className="w-full p-2 border rounded"
                   disabled={loadingReinforcers}
@@ -1349,8 +1359,8 @@ export default function ActivityForm({
               </label>
               <input
                 type="text"
-                name="reinforcement.reinforcerName"
-                value={currentActivity.reinforcement.reinforcerName}
+                name="reinforcement.reinforcementName"
+                value={currentActivity.reinforcement?.reinforcementName || ""}
                 onChange={handleChange}
                 className="w-full p-2 border rounded"
                 placeholder="Enter reinforcer name"
@@ -1365,8 +1375,8 @@ export default function ActivityForm({
               </label>
               <input
                 type="text"
-                name="reinforcement.type"
-                value={currentActivity.reinforcement.type}
+                name="reinforcement.reinforcementType"
+                value={currentActivity.reinforcement?.reinforcementType || ""}
                 onChange={handleChange}
                 className="w-full p-2 border rounded"
                 placeholder="Enter reinforcer type"
@@ -1380,7 +1390,7 @@ export default function ActivityForm({
             </label>
             <textarea
               name="reinforcement.notes"
-              value={currentActivity.reinforcement.notes || ""}
+              value={currentActivity.reinforcement?.notes || ""}
               onChange={handleChange}
               rows={2}
               className="w-full p-2 border rounded"

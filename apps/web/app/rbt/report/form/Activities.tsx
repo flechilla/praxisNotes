@@ -3,8 +3,9 @@
 import React, { useState } from "react";
 import {
   ActivitiesFormData,
-  Activity,
-} from "@praxisnotes/types/src/SessionForm";
+  ActivityWithRelations,
+  NewActivity,
+} from "@praxisnotes/types";
 import ActivityForm from "./ActivityForm";
 import {
   activityLocationOptions,
@@ -31,18 +32,21 @@ export default function Activities({
   >(null);
 
   // Empty activity template
-  const emptyActivity: Activity = {
+  const emptyActivity: NewActivity = {
     name: "",
     description: "",
     goal: "",
     location: "",
+    sessionId: "",
+    completed: false,
     behaviors: [],
     promptsUsed: [],
-    completed: false,
     reinforcement: {
-      reinforcerName: "",
-      type: "",
+      activityId: "",
+      reinforcementName: "",
+      reinforcementType: "",
     },
+    skills: [],
   };
 
   const validateForm = () => {
@@ -56,11 +60,63 @@ export default function Activities({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSaveActivity = (activity: Activity) => {
+  const handleSaveActivity = (activity: NewActivity) => {
     if (editingActivityIndex !== null) {
       // Update existing activity
       const updatedActivities = [...data.activities];
-      updatedActivities[editingActivityIndex] = activity;
+      // Convert NewActivity to ActivityWithRelations
+      const updatedActivity: ActivityWithRelations = {
+        ...updatedActivities[editingActivityIndex],
+        id: activity.id || updatedActivities[editingActivityIndex].id,
+        name: activity.name,
+        description: activity.description,
+        goal: activity.goal,
+        location: activity.location,
+        duration: activity.duration || 0,
+        sessionId: activity.sessionId,
+        completed: activity.completed,
+        completionNotes: activity.completionNotes,
+        behaviors:
+          activity.behaviors?.map((b) => ({
+            ...b,
+            id: b.id || `${Date.now()}-${Math.random()}`,
+            activityId: updatedActivities[editingActivityIndex].id,
+          })) || [],
+        promptsUsed:
+          activity.promptsUsed?.map((p) => ({
+            ...p,
+            id: p.id || `${Date.now()}-${Math.random()}`,
+            activityId: updatedActivities[editingActivityIndex].id,
+          })) || [],
+        reinforcement: [
+          activity.reinforcement
+            ? {
+                id:
+                  activity.reinforcement.id || `${Date.now()}-${Math.random()}`,
+                activityId: updatedActivities[editingActivityIndex].id,
+                reinforcementName:
+                  activity.reinforcement.reinforcementName || "",
+                reinforcementType:
+                  activity.reinforcement.reinforcementType || "",
+                notes: activity.reinforcement.notes,
+                reinforcementId: activity.reinforcement.reinforcementId,
+              }
+            : {
+                id: `${Date.now()}-${Math.random()}`,
+                activityId: updatedActivities[editingActivityIndex].id,
+                reinforcementName: "",
+                reinforcementType: "",
+              },
+        ],
+        skills:
+          activity.skills?.map((s) => ({
+            ...s,
+            id: s.id || `${Date.now()}-${Math.random()}`,
+            activityId: updatedActivities[editingActivityIndex].id,
+          })) || [],
+      };
+
+      updatedActivities[editingActivityIndex] = updatedActivity;
 
       updateData({
         ...data,
@@ -69,10 +125,65 @@ export default function Activities({
 
       setEditingActivityIndex(null);
     } else {
-      // Add new activity
+      // Add new activity with generated ID
+      const newId = `activity-${Date.now()}`;
+
+      // Convert NewActivity to ActivityWithRelations
+      const newActivityWithRelations: ActivityWithRelations = {
+        id: activity.id || newId,
+        name: activity.name,
+        description: activity.description,
+        goal: activity.goal,
+        location: activity.location,
+        duration: activity.duration || 0,
+        sessionId: activity.sessionId,
+        completed: activity.completed,
+        completionNotes: activity.completionNotes,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        behaviors:
+          activity.behaviors?.map((b) => ({
+            ...b,
+            id: b.id || `${Date.now()}-${Math.random()}`,
+            activityId: newId,
+          })) || [],
+        promptsUsed:
+          activity.promptsUsed?.map((p) => ({
+            ...p,
+            id: p.id || `${Date.now()}-${Math.random()}`,
+            activityId: newId,
+          })) || [],
+        reinforcement: [
+          activity.reinforcement
+            ? {
+                id:
+                  activity.reinforcement.id || `${Date.now()}-${Math.random()}`,
+                activityId: newId,
+                reinforcementName:
+                  activity.reinforcement.reinforcementName || "",
+                reinforcementType:
+                  activity.reinforcement.reinforcementType || "",
+                notes: activity.reinforcement.notes,
+                reinforcementId: activity.reinforcement.reinforcementId,
+              }
+            : {
+                id: `${Date.now()}-${Math.random()}`,
+                activityId: newId,
+                reinforcementName: "",
+                reinforcementType: "",
+              },
+        ],
+        skills:
+          activity.skills?.map((s) => ({
+            ...s,
+            id: s.id || `${Date.now()}-${Math.random()}`,
+            activityId: newId,
+          })) || [],
+      };
+
       updateData({
         ...data,
-        activities: [...data.activities, activity],
+        activities: [...data.activities, newActivityWithRelations],
       });
     }
 
@@ -109,12 +220,33 @@ export default function Activities({
   };
 
   // Get activity based on editing index, with null check
-  const getActivityToEdit = (): Activity => {
+  const getActivityToEdit = (): NewActivity => {
     if (
       editingActivityIndex !== null &&
       data.activities[editingActivityIndex]
     ) {
-      return data.activities[editingActivityIndex];
+      const currentActivity = data.activities[editingActivityIndex];
+
+      // Convert ActivityWithRelations to NewActivity for editing
+      return {
+        id: currentActivity.id,
+        name: currentActivity.name,
+        description: currentActivity.description,
+        goal: currentActivity.goal,
+        location: currentActivity.location,
+        duration: currentActivity.duration,
+        sessionId: currentActivity.sessionId,
+        completed: currentActivity.completed,
+        completionNotes: currentActivity.completionNotes,
+        behaviors: currentActivity.behaviors,
+        promptsUsed: currentActivity.promptsUsed,
+        reinforcement:
+          currentActivity.reinforcement &&
+          currentActivity.reinforcement.length > 0
+            ? currentActivity.reinforcement[0]
+            : undefined,
+        skills: currentActivity.skills,
+      };
     }
     return emptyActivity;
   };
@@ -216,7 +348,7 @@ export default function Activities({
                       <p className="text-gray-900">{activity.description}</p>
                     </div>
 
-                    {activity.behaviors.length > 0 && (
+                    {activity.behaviors && activity.behaviors.length > 0 && (
                       <div className="md:col-span-2">
                         <p className="text-sm font-medium text-gray-700 mb-2">
                           Behaviors:
@@ -232,32 +364,44 @@ export default function Activities({
                       </div>
                     )}
 
-                    {activity.promptsUsed.length > 0 && (
-                      <div className="md:col-span-2">
-                        <p className="text-sm font-medium text-gray-700 mb-2">
-                          Prompts Used:
-                        </p>
-                        <ul className="list-disc pl-5 space-y-1">
-                          {activity.promptsUsed.map((prompt, pIndex) => (
-                            <li key={pIndex}>
-                              {getLabelFromValue(
-                                prompt.type,
-                                promptTypeOptions,
-                              )}
-                              : {prompt.count} times
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                    {activity.promptsUsed &&
+                      activity.promptsUsed.length > 0 && (
+                        <div className="md:col-span-2">
+                          <p className="text-sm font-medium text-gray-700 mb-2">
+                            Prompts Used:
+                          </p>
+                          <ul className="list-disc pl-5 space-y-1">
+                            {activity.promptsUsed.map((prompt, pIndex) => (
+                              <li key={pIndex}>
+                                {getLabelFromValue(
+                                  prompt.type,
+                                  promptTypeOptions,
+                                )}
+                                : {prompt.count} times
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
 
                     <div className="md:col-span-2">
                       <p className="text-sm font-medium text-gray-700">
                         Reinforcement:
                       </p>
                       <p className="text-gray-900">
-                        {activity.reinforcement.reinforcerName} (
-                        {activity.reinforcement.type})
+                        {activity.reinforcement &&
+                          activity.reinforcement.length > 0 && (
+                            <>
+                              {activity.reinforcement[0].reinforcementName}
+                              {activity.reinforcement[0].reinforcementType && (
+                                <>
+                                  {" "}
+                                  ({activity.reinforcement[0].reinforcementType}
+                                  )
+                                </>
+                              )}
+                            </>
+                          )}
                       </p>
                     </div>
 
