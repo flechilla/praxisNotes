@@ -72,8 +72,8 @@ npm run seed
 ## Using the Database in Other Packages
 
 ```typescript
-import { db } from "@repo/database";
-import { users, organizations } from "@repo/database/schema";
+import { db } from "@praxisnotes/database";
+import { users, organizations } from "@praxisnotes/database/schema";
 
 // Query example
 const result = await db.query.users.findMany({

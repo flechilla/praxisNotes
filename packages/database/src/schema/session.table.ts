@@ -11,8 +11,6 @@ import { relations } from "drizzle-orm";
 import { clients } from "./client.table";
 import { users } from "./user.table";
 import { reports } from "./report.table";
-import { skillTrackings } from "./skill_tracking.table";
-import { behaviorTrackings } from "./behavior_tracking.table";
 import { reinforcements } from "./reinforcement.table";
 import { activities } from "./activity.table";
 import { initialStatuses } from "./initial_status.table";
@@ -57,8 +55,6 @@ export const sessionsRelations = relations(sessions, ({ one, many }) => ({
     references: [users.id],
   }),
   reports: many(reports),
-  skillTrackings: many(skillTrackings),
-  behaviorTrackings: many(behaviorTrackings),
   reinforcements: many(reinforcements),
   activities: many(activities),
   initialStatus: one(initialStatuses, {

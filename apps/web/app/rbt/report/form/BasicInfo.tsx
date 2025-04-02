@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
-import { BasicInfoFormData } from "../../../../lib/types/SessionForm";
-import { mockClients } from "../../../../lib/mocks/clientData";
+import React, { useState, useEffect } from "react";
+import { BasicInfoFormData } from "@praxisnotes/types/src/SessionForm";
 import { locationOptions } from "../../constants/formOptions";
+import { ClientService } from "../../../../lib/services/client.service";
+import { ClientInfo } from "@praxisnotes/types/src/SessionForm";
 
 type BasicInfoProps = {
   data: BasicInfoFormData;
@@ -17,9 +18,27 @@ export default function BasicInfo({
   onNext,
 }: BasicInfoProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [clients, setClients] = useState<ClientInfo[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Format the current date as YYYY-MM-DD for the date input default
   const today = new Date().toISOString().split("T")[0];
+
+  // Fetch clients on component mount
+  useEffect(() => {
+    async function fetchClients() {
+      try {
+        const clientData = await ClientService.getAllClientInfos();
+        setClients(clientData);
+      } catch (error) {
+        console.error("Error fetching clients:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchClients();
+  }, []);
 
   // Check if all required fields are filled
   const validateForm = () => {
@@ -63,7 +82,7 @@ export default function BasicInfo({
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
     updateData({ ...data, [name]: value });
@@ -175,20 +194,25 @@ export default function BasicInfo({
           >
             Client
           </label>
-          <select
-            id="clientId"
-            name="clientId"
-            value={data.clientId || ""}
-            onChange={handleChange}
-            className={`w-full px-3 py-2 border ${errors.clientId ? "border-red-500" : "border-gray-300"} rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
-          >
-            <option value="">Select client</option>
-            {mockClients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.firstName} {client.lastName} - {client.diagnosis}
-              </option>
-            ))}
-          </select>
+          {loading ? (
+            <div className="animate-pulse h-10 bg-gray-200 rounded-md w-full"></div>
+          ) : (
+            <select
+              id="clientId"
+              name="clientId"
+              value={data.clientId || ""}
+              onChange={handleChange}
+              className={`w-full px-3 py-2 border ${errors.clientId ? "border-red-500" : "border-gray-300"} rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
+            >
+              <option value="">Select client</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.firstName} {client.lastName} -{" "}
+                  {client.diagnosis || "No diagnosis"}
+                </option>
+              ))}
+            </select>
+          )}
           {errors.clientId && (
             <p className="mt-1 text-sm text-red-600">{errors.clientId}</p>
           )}

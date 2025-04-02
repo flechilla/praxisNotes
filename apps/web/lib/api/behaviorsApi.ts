@@ -1,4 +1,5 @@
 import { BehaviorOption } from "../mocks/behaviorsData";
+import { BehaviorOption as SharedBehaviorOption } from "@praxisnotes/types";
 
 /**
  * Fetches all behaviors
@@ -11,8 +12,18 @@ export const fetchAllBehaviors = async (): Promise<BehaviorOption[]> => {
       throw new Error(`Error fetching behaviors: ${response.status}`);
     }
 
-    const data = await response.json();
-    return data.behaviors;
+    const { data } = await response.json();
+
+    if (!data.behaviors || !Array.isArray(data.behaviors)) {
+      throw new Error("Invalid response format from behaviors API");
+    }
+
+    return data.behaviors.map((behavior: SharedBehaviorOption) => ({
+      id: behavior.id,
+      name: behavior.name,
+      definition: behavior.definition,
+      category: behavior.category,
+    }));
   } catch (error) {
     console.error("Failed to fetch behaviors:", error);
     throw error;
@@ -23,7 +34,7 @@ export const fetchAllBehaviors = async (): Promise<BehaviorOption[]> => {
  * Fetches a specific behavior by ID
  */
 export const fetchBehaviorById = async (
-  id: string
+  id: string,
 ): Promise<BehaviorOption | null> => {
   try {
     const response = await fetch(`/api/behaviors?id=${id}`);
@@ -48,11 +59,11 @@ export const fetchBehaviorById = async (
  * Searches behaviors by name or definition
  */
 export const searchBehaviors = async (
-  query: string
+  query: string,
 ): Promise<BehaviorOption[]> => {
   try {
     const response = await fetch(
-      `/api/behaviors?search=${encodeURIComponent(query)}`
+      `/api/behaviors?search=${encodeURIComponent(query)}`,
     );
 
     if (!response.ok) {

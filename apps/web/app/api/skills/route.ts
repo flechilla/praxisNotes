@@ -1,31 +1,54 @@
-import { NextRequest, NextResponse } from "next/server";
-import { skillPrograms, skillTargets } from "../../../lib/mocks/skillsData";
+import { NextRequest } from "next/server";
+import {
+  createSuccessResponse,
+  withApiMiddleware,
+  validateQuery,
+  z,
+} from "../../../lib/api";
+import { db } from "@praxisnotes/database";
+import { skills } from "@praxisnotes/database";
+import { eq } from "drizzle-orm";
 
-export async function GET(request: NextRequest) {
+// Schema for validating query parameters
+const getSkillsQuerySchema = z.object({
+  programId: z.string().optional(),
+});
+
+// GET handler for skills
+async function getHandler(request: NextRequest) {
+  // Validate query parameters
+  const queryResult = await validateQuery(request, getSkillsQuerySchema);
+  if (!queryResult.success) {
+    return queryResult.response;
+  }
+
+  const { programId } = queryResult.data;
+
   try {
-    // Get query parameters
-    const { searchParams } = new URL(request.url);
-    const programId = searchParams.get("programId");
-
-    // Simulate database operation delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    // Return data based on query parameters
+    // If programId is provided, return skills for that program
     if (programId) {
-      // If programId is provided, return targets for that program
-      const targets = skillTargets.filter(
-        (target) => target.programId === programId
-      );
-      return NextResponse.json({ targets }, { status: 200 });
+      const skillTargets = await db.query.skills.findMany({
+        where: eq(skills.program, programId),
+      });
+
+      return createSuccessResponse({ targets: skillTargets });
     } else {
-      // If no programId is provided, return all programs
-      return NextResponse.json({ programs: skillPrograms }, { status: 200 });
+      // If no programId is provided, return all distinct programs
+      const skillPrograms = await db
+        .select({
+          id: skills.program,
+          name: skills.program,
+        })
+        .from(skills)
+        .groupBy(skills.program);
+
+      return createSuccessResponse({ programs: skillPrograms });
     }
   } catch (error) {
     console.error("Error fetching skills data:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch skills data" },
-      { status: 500 }
-    );
+    throw error;
   }
 }
+
+// Apply middleware to our handler
+export const GET = withApiMiddleware(getHandler);

@@ -2,27 +2,75 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Activity,
-  ActivityBehavior,
-  ActivityPrompt,
   ActivityReinforcement,
-} from "../../../../lib/types/SessionForm";
+  NewActivitySkill,
+  NewActivityBehavior,
+  NewActivityPrompt,
+  NewActivity,
+  ActivityReinforcementForm,
+} from "@praxisnotes/types";
 import {
   activityLocationOptions,
   promptTypeOptions,
   interventionTypeOptions,
   behaviorIntensityOptions,
+  promptLevelOptions,
 } from "../../constants/formOptions";
-import { BehaviorOption } from "../../../../lib/mocks/behaviorsData";
 import { fetchAllBehaviors } from "../../../../lib/api/behaviorsApi";
 import { fetchAllReinforcers } from "../../../../lib/api/reinforcersApi";
 import LoadingSpinner from "../../../../components/ui/LoadingSpinner";
 import MultiSelect from "../../../../components/ui/MultiSelect";
+import {
+  fetchSkillPrograms,
+  fetchTargetsByProgramId,
+} from "../../../../lib/api/skillsApi";
+
+// Define missing types
+type BehaviorOption = {
+  id: string;
+  name: string;
+  definition?: string;
+};
+
+type SkillProgramOption = {
+  id: string;
+  name: string;
+};
+
+type SkillTargetOption = {
+  id: string;
+  name: string;
+  programId: string;
+};
+
+type ReinforcementOption = {
+  id: string;
+  name: string;
+  type?: string;
+  description?: string;
+};
 
 type ActivityFormProps = {
-  activity: Activity;
-  onSave: (activity: Activity) => void;
+  activity: NewActivity;
+  onSave: (activity: NewActivity) => void;
   onCancel: () => void;
+};
+
+// Define the skill form data type
+type SkillFormData = {
+  id: string;
+  name: string;
+  program: string;
+  target: string;
+  trials: number;
+  mastery: number;
+  promptLevel: string;
+  correct: number;
+  prompted: number;
+  incorrect: number;
+  notes: string;
+  programId: string;
+  targetId: string;
 };
 
 export default function ActivityForm({
@@ -30,7 +78,18 @@ export default function ActivityForm({
   onSave,
   onCancel,
 }: ActivityFormProps) {
-  const [currentActivity, setCurrentActivity] = useState<Activity>(activity);
+  // Initialize with default values for all optional properties
+  const [currentActivity, setCurrentActivity] = useState<NewActivity>({
+    ...activity,
+    behaviors: activity.behaviors || [],
+    promptsUsed: activity.promptsUsed || [],
+    reinforcement: activity.reinforcement || {
+      activityId: activity.id || "",
+      reinforcerName: "",
+      type: "",
+    },
+    skills: activity.skills || [],
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // State for behavior options
@@ -39,20 +98,48 @@ export default function ActivityForm({
   const [apiError, setApiError] = useState<string | null>(null);
 
   // State for reinforcer options
-  const [reinforcers, setReinforcers] = useState<any[]>([]);
+  const [reinforcers, setReinforcers] = useState<ReinforcementOption[]>([]);
   const [loadingReinforcers, setLoadingReinforcers] = useState(false);
 
   // State for current behavior being added
-  const [currentBehavior, setCurrentBehavior] = useState<ActivityBehavior>({
+  const [currentBehavior, setCurrentBehavior] = useState<NewActivityBehavior>({
+    id: "",
+    activityId: "",
     behaviorName: "",
     intensity: "",
     interventionUsed: [],
   });
 
   // State for current prompt being added
-  const [currentPrompt, setCurrentPrompt] = useState<ActivityPrompt>({
+  const [currentPrompt, setCurrentPrompt] = useState<NewActivityPrompt>({
+    id: "",
+    activityId: "",
     type: "",
     count: 0,
+  });
+
+  // State for skill options
+  const [skillPrograms, setSkillPrograms] = useState<SkillProgramOption[]>([]);
+  const [skillTargets, setSkillTargets] = useState<SkillTargetOption[]>([]);
+  const [loadingSkillPrograms, setLoadingSkillPrograms] = useState(false);
+  const [loadingSkillTargets, setLoadingSkillTargets] = useState(false);
+  const [selectedProgram, setSelectedProgram] = useState<string>("");
+
+  // State for current skill being added
+  const [currentSkill, setCurrentSkill] = useState<SkillFormData>({
+    id: "",
+    name: "",
+    program: "",
+    target: "",
+    trials: 0,
+    mastery: 0,
+    promptLevel: "",
+    correct: 0,
+    prompted: 0,
+    incorrect: 0,
+    notes: "",
+    programId: "",
+    targetId: "",
   });
 
   // Fetch behaviors and reinforcers on component mount
@@ -60,6 +147,7 @@ export default function ActivityForm({
     const fetchOptions = async () => {
       setLoadingBehaviors(true);
       setLoadingReinforcers(true);
+      setLoadingSkillPrograms(true);
       setApiError(null);
 
       try {
@@ -80,15 +168,57 @@ export default function ActivityForm({
         setApiError((prev) =>
           prev
             ? `${prev} Also failed to load reinforcers.`
-            : "Failed to load reinforcers. Please try again."
+            : "Failed to load reinforcers. Please try again.",
         );
       } finally {
         setLoadingReinforcers(false);
+      }
+
+      try {
+        const programsData = await fetchSkillPrograms();
+        setSkillPrograms(programsData);
+      } catch (error) {
+        console.error("Error fetching skill programs:", error);
+        setApiError((prev) =>
+          prev
+            ? `${prev} Also failed to load skill programs.`
+            : "Failed to load skill programs. Please try again.",
+        );
+      } finally {
+        setLoadingSkillPrograms(false);
       }
     };
 
     fetchOptions();
   }, []);
+
+  // Fetch target skills when program changes
+  useEffect(() => {
+    const fetchTargetSkills = async () => {
+      if (!selectedProgram) {
+        setSkillTargets([]);
+        return;
+      }
+
+      setLoadingSkillTargets(true);
+      setApiError(null);
+      try {
+        const targetsData = await fetchTargetsByProgramId(selectedProgram);
+        setSkillTargets(targetsData);
+      } catch (error) {
+        console.error("Error fetching target skills:", error);
+        setApiError((prev) =>
+          prev
+            ? `${prev} Also failed to load target skills.`
+            : "Failed to load target skills. Please try again.",
+        );
+      } finally {
+        setLoadingSkillTargets(false);
+      }
+    };
+
+    fetchTargetSkills();
+  }, [selectedProgram]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -109,7 +239,7 @@ export default function ActivityForm({
       newErrors.location = "Location is required";
     }
 
-    if (!currentActivity.reinforcement.reinforcerName) {
+    if (!currentActivity.reinforcement?.id) {
       newErrors.reinforcement = "Reinforcement is required";
     }
 
@@ -120,21 +250,15 @@ export default function ActivityForm({
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value } = e.target;
 
     // For basic activity properties
     if (
-      [
-        "name",
-        "description",
-        "goal",
-        "location",
-        "reinforcerName",
-        "type",
-        "notes",
-      ].includes(name)
+      ["name", "description", "goal", "location", "type", "notes"].includes(
+        name,
+      )
     ) {
       setCurrentActivity({
         ...currentActivity,
@@ -148,7 +272,7 @@ export default function ActivityForm({
     } else if (name === "duration") {
       setCurrentActivity({
         ...currentActivity,
-        duration: value ? parseInt(value) : undefined,
+        duration: value ? parseInt(value) : 0,
       });
     } else if (name === "completionNotes") {
       setCurrentActivity({
@@ -158,14 +282,13 @@ export default function ActivityForm({
     }
     // For reinforcement fields
     else if (name.startsWith("reinforcement.")) {
-      const reinforcementField = name.split(
-        "."
-      )[1] as keyof ActivityReinforcement;
+      const reinforcementField = name.split(".")[1];
       setCurrentActivity({
         ...currentActivity,
         reinforcement: {
           ...currentActivity.reinforcement,
           [reinforcementField]: value,
+          activityId: currentActivity.id || "",
         },
       });
     }
@@ -180,9 +303,8 @@ export default function ActivityForm({
           ...currentActivity,
           reinforcement: {
             ...currentActivity.reinforcement,
-            reinforcerId: selectedReinforcer.id,
-            reinforcerName: selectedReinforcer.name,
-            type: selectedReinforcer.type,
+            reinforcementId: selectedReinforcer.id,
+            activityId: currentActivity.id || "",
           },
         });
       }
@@ -193,21 +315,24 @@ export default function ActivityForm({
   const handleBehaviorChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value } = e.target;
 
     if (name === "behaviorSelect") {
-      if (value) {
-        const selectedBehavior = behaviors.find((b) => b.id === value);
-        if (selectedBehavior) {
-          setCurrentBehavior({
-            ...currentBehavior,
-            behaviorId: selectedBehavior.id,
-            behaviorName: selectedBehavior.name,
-            definition: selectedBehavior.definition,
-          });
-        }
+      const selectedBehavior = behaviors.find((b) => b.id === value);
+      if (selectedBehavior) {
+        setCurrentBehavior({
+          ...currentBehavior,
+          behaviorId: selectedBehavior.id,
+          behaviorName: selectedBehavior.name,
+        });
+      } else {
+        setCurrentBehavior({
+          ...currentBehavior,
+          behaviorId: "",
+          behaviorName: "",
+        });
       }
     } else {
       setCurrentBehavior({
@@ -240,11 +365,12 @@ export default function ActivityForm({
 
     setCurrentActivity({
       ...currentActivity,
-      behaviors: [...currentActivity.behaviors, currentBehavior],
+      behaviors: [...(currentActivity.behaviors || []), currentBehavior],
     });
 
     // Reset the current behavior
     setCurrentBehavior({
+      activityId: currentActivity.id || "",
       behaviorName: "",
       intensity: "",
       interventionUsed: [],
@@ -259,13 +385,13 @@ export default function ActivityForm({
   const handleRemoveBehavior = (index: number) => {
     setCurrentActivity({
       ...currentActivity,
-      behaviors: currentActivity.behaviors.filter((_, i) => i !== index),
+      behaviors: currentActivity.behaviors?.filter((_, i) => i !== index) || [],
     });
   };
 
   // Handle prompt fields
   const handlePromptChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
 
@@ -293,19 +419,20 @@ export default function ActivityForm({
     }
 
     // Check if prompt type already exists
-    const existingPromptIndex = currentActivity.promptsUsed.findIndex(
-      (p) => p.type === currentPrompt.type
+    const existingPromptIndex = currentActivity.promptsUsed?.findIndex(
+      (p) => p.type === currentPrompt.type,
     );
 
-    if (existingPromptIndex >= 0) {
+    if (existingPromptIndex && existingPromptIndex >= 0) {
       // Update existing prompt count
-      const updatedPrompts = [...currentActivity.promptsUsed];
+      const updatedPrompts = [...(currentActivity.promptsUsed || [])];
       const existingPrompt = updatedPrompts[existingPromptIndex];
 
       if (existingPrompt) {
         updatedPrompts[existingPromptIndex] = {
-          type: existingPrompt.type,
+          ...existingPrompt,
           count: existingPrompt.count + currentPrompt.count,
+          activityId: currentActivity.id || "",
         };
 
         setCurrentActivity({
@@ -318,8 +445,10 @@ export default function ActivityForm({
       setCurrentActivity({
         ...currentActivity,
         promptsUsed: [
-          ...currentActivity.promptsUsed,
+          ...(currentActivity.promptsUsed || []),
           {
+            id: "",
+            activityId: currentActivity.id || "",
             type: currentPrompt.type,
             count: currentPrompt.count,
           },
@@ -329,6 +458,8 @@ export default function ActivityForm({
 
     // Reset the current prompt
     setCurrentPrompt({
+      id: "",
+      activityId: currentActivity.id || "",
       type: "",
       count: 0,
     });
@@ -341,7 +472,142 @@ export default function ActivityForm({
   const handleRemovePrompt = (index: number) => {
     setCurrentActivity({
       ...currentActivity,
-      promptsUsed: currentActivity.promptsUsed.filter((_, i) => i !== index),
+      promptsUsed:
+        currentActivity.promptsUsed?.filter((_, i) => i !== index) || [],
+    });
+  };
+
+  // Handle skill fields
+  const handleSkillChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
+    const { name, value } = e.target;
+
+    if (name === "program") {
+      // When program changes, update the selectedProgram state to trigger target skills loading
+      setSelectedProgram(value);
+
+      // Find the program object
+      const selectedProgramObj = skillPrograms.find(
+        (prog) => prog.id === value,
+      );
+
+      // Update the current skill with the program name
+      setCurrentSkill({
+        ...currentSkill,
+        program: selectedProgramObj ? selectedProgramObj.name : value,
+        programId: value, // Store the program ID for reference
+        target: "", // Reset target when program changes
+        targetId: "", // Reset targetId when program changes
+      });
+    } else if (name === "target") {
+      // Find the target object
+      const selectedTargetObj = skillTargets.find(
+        (target) => target.id === value,
+      );
+
+      setCurrentSkill({
+        ...currentSkill,
+        target: selectedTargetObj ? selectedTargetObj.name : value,
+        targetId: value, // Store the target ID for reference
+      });
+    } else if (
+      ["trials", "mastery", "correct", "prompted", "incorrect"].includes(name)
+    ) {
+      setCurrentSkill({
+        ...currentSkill,
+        [name]: parseInt(value) || 0,
+      });
+    } else {
+      setCurrentSkill({ ...currentSkill, [name]: value });
+    }
+  };
+
+  const validateSkillForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!currentSkill.program) {
+      newErrors.skillProgram = "Program is required";
+    }
+    if (!currentSkill.target) {
+      newErrors.skillTarget = "Target is required";
+    }
+    if (currentSkill.trials <= 0) {
+      newErrors.skillTrials = "Number of trials must be greater than 0";
+    }
+    if (
+      (currentSkill.correct || 0) +
+        (currentSkill.prompted || 0) +
+        (currentSkill.incorrect || 0) !==
+      currentSkill.trials
+    ) {
+      newErrors.skillTrials =
+        "The sum of correct, prompted, and incorrect must equal total trials";
+    }
+
+    return newErrors;
+  };
+
+  const handleAddSkill = () => {
+    const skillErrors = validateSkillForm();
+
+    if (Object.keys(skillErrors).length > 0) {
+      setErrors({ ...errors, ...skillErrors });
+      return;
+    }
+
+    // If name is not provided, use target as name
+    const skillToAdd: NewActivitySkill = {
+      activityId: currentActivity.id || "",
+      skillId: currentSkill.targetId || `skill-${Date.now()}`,
+      trials: currentSkill.trials,
+      mastery: currentSkill.mastery,
+      promptLevel: currentSkill.promptLevel,
+      correct: currentSkill.correct,
+      prompted: currentSkill.prompted,
+      incorrect: currentSkill.incorrect,
+      notes: currentSkill.notes,
+    };
+
+    setCurrentActivity({
+      ...currentActivity,
+      skills: [...(currentActivity.skills || []), skillToAdd],
+    });
+
+    // Reset form
+    setCurrentSkill({
+      id: "",
+      name: "",
+      program: "",
+      target: "",
+      trials: 0,
+      mastery: 0,
+      promptLevel: "",
+      correct: 0,
+      prompted: 0,
+      incorrect: 0,
+      notes: "",
+      programId: "",
+      targetId: "",
+    });
+    setSelectedProgram("");
+
+    // Clear any skill-related errors
+    const newErrors = { ...errors };
+    delete newErrors.skillProgram;
+    delete newErrors.skillTarget;
+    delete newErrors.skillTrials;
+    setErrors(newErrors);
+  };
+
+  const handleRemoveSkill = (index: number) => {
+    setCurrentActivity({
+      ...currentActivity,
+      skills: (currentActivity.skills || []).filter(
+        (_, i: number) => i !== index,
+      ),
     });
   };
 
@@ -371,7 +637,7 @@ export default function ActivityForm({
         </div>
       )}
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="space-y-6 text-black">
         {/* Activity Details Section */}
         <div className="mb-6 border-b pb-6">
           <h4 className="text-lg font-medium mb-4">Activity Details</h4>
@@ -488,16 +754,27 @@ export default function ActivityForm({
                     disabled={loadingBehaviors}
                   >
                     <option value="">Select a behavior</option>
-                    {behaviors.map((behavior) => (
-                      <option key={behavior.id} value={behavior.id}>
-                        {behavior.name}
+                    {!loadingBehaviors && behaviors && behaviors.length > 0 ? (
+                      behaviors.map((behavior) => (
+                        <option key={behavior.id} value={behavior.id}>
+                          {behavior.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>
+                        {loadingBehaviors
+                          ? "Loading behaviors..."
+                          : "No behaviors available"}
                       </option>
-                    ))}
+                    )}
                   </select>
                   {loadingBehaviors && (
                     <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
                       <LoadingSpinner size="small" />
                     </div>
+                  )}
+                  {apiError && (
+                    <p className="text-red-500 text-sm mt-1">{apiError}</p>
                   )}
                 </div>
               </div>
@@ -578,7 +855,7 @@ export default function ActivityForm({
           </div>
 
           {/* List of added behaviors */}
-          {currentActivity.behaviors.length > 0 ? (
+          {currentActivity.behaviors && currentActivity.behaviors.length > 0 ? (
             <div className="border rounded-lg overflow-hidden">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -611,7 +888,7 @@ export default function ActivityForm({
                         {behavior.interventionUsed
                           .map((intervention) => {
                             const option = interventionTypeOptions.find(
-                              (opt) => opt.value === intervention
+                              (opt) => opt.value === intervention,
                             );
                             return option ? option.label : intervention;
                           })
@@ -693,7 +970,9 @@ export default function ActivityForm({
           </div>
 
           {/* List of added prompts */}
-          {currentActivity.promptsUsed.length > 0 ? (
+          {currentActivity &&
+          currentActivity.promptsUsed &&
+          currentActivity.promptsUsed.length > 0 ? (
             <div className="border rounded-lg overflow-hidden">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -714,7 +993,7 @@ export default function ActivityForm({
                     <tr key={index}>
                       <td className="px-4 py-2 text-sm text-gray-900">
                         {promptTypeOptions.find(
-                          (opt) => opt.value === prompt.type
+                          (opt) => opt.value === prompt.type,
                         )?.label || prompt.type}
                       </td>
                       <td className="px-4 py-2 text-sm text-gray-900">
@@ -737,6 +1016,271 @@ export default function ActivityForm({
           ) : (
             <div className="bg-gray-50 p-4 text-center rounded-lg text-gray-500">
               No prompts added yet.
+            </div>
+          )}
+        </div>
+
+        {/* Skills Section */}
+        <div className="mb-6 border-b pb-6">
+          <h4 className="text-lg font-medium mb-4">Skills</h4>
+
+          <div className="bg-gray-50 p-4 rounded-lg mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Program
+                </label>
+                <div className="relative">
+                  <select
+                    name="program"
+                    value={selectedProgram}
+                    onChange={handleSkillChange}
+                    className="w-full p-2 border rounded"
+                    disabled={loadingSkillPrograms}
+                  >
+                    <option value="">Select a program</option>
+                    {skillPrograms.map((program) => (
+                      <option key={program.id} value={program.id}>
+                        {program.name}
+                      </option>
+                    ))}
+                  </select>
+                  {loadingSkillPrograms && (
+                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                      <LoadingSpinner size="small" />
+                    </div>
+                  )}
+                </div>
+                {errors.skillProgram && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.skillProgram}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Target Skill
+                </label>
+                <div className="relative">
+                  <select
+                    name="target"
+                    value={currentSkill.targetId || ""}
+                    onChange={handleSkillChange}
+                    className="w-full p-2 border rounded"
+                    disabled={loadingSkillTargets || !selectedProgram}
+                  >
+                    <option value="">Select a target skill</option>
+                    {skillTargets.map((target) => (
+                      <option key={target.id} value={target.id}>
+                        {target.name}
+                      </option>
+                    ))}
+                  </select>
+                  {loadingSkillTargets && (
+                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                      <LoadingSpinner size="small" />
+                    </div>
+                  )}
+                </div>
+                {errors.skillTarget && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.skillTarget}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Skill Name (optional)
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={currentSkill.name}
+                onChange={handleSkillChange}
+                className="w-full p-2 border rounded"
+                placeholder="Optional custom name"
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Total Trials
+              </label>
+              <input
+                type="number"
+                name="trials"
+                value={currentSkill.trials}
+                onChange={handleSkillChange}
+                min="0"
+                className="w-full p-2 border rounded"
+              />
+              {errors.skillTrials && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.skillTrials}
+                </p>
+              )}
+            </div>
+
+            <div className="mb-4">
+              <h5 className="text-sm font-medium text-gray-700 mb-2">
+                Trial Breakdown
+              </h5>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">
+                    Correct
+                  </label>
+                  <input
+                    type="number"
+                    name="correct"
+                    value={currentSkill.correct}
+                    onChange={handleSkillChange}
+                    min="0"
+                    className="w-full p-2 border rounded"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">
+                    Prompted
+                  </label>
+                  <input
+                    type="number"
+                    name="prompted"
+                    value={currentSkill.prompted}
+                    onChange={handleSkillChange}
+                    min="0"
+                    className="w-full p-2 border rounded"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">
+                    Incorrect
+                  </label>
+                  <input
+                    type="number"
+                    name="incorrect"
+                    value={currentSkill.incorrect}
+                    onChange={handleSkillChange}
+                    min="0"
+                    className="w-full p-2 border rounded"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mastery Percentage
+                </label>
+                <input
+                  type="number"
+                  name="mastery"
+                  value={currentSkill.mastery}
+                  onChange={handleSkillChange}
+                  min="0"
+                  max="100"
+                  className="w-full p-2 border rounded"
+                  placeholder="Mastery percentage (0-100)"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Prompt Level
+                </label>
+                <select
+                  name="promptLevel"
+                  value={currentSkill.promptLevel}
+                  onChange={handleSkillChange}
+                  className="w-full p-2 border rounded"
+                >
+                  <option value="">Select prompt level</option>
+                  {promptLevelOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Notes
+              </label>
+              <textarea
+                name="notes"
+                value={currentSkill.notes}
+                onChange={handleSkillChange}
+                rows={2}
+                className="w-full p-2 border rounded"
+                placeholder="Additional notes about the skill acquisition"
+              ></textarea>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleAddSkill}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+            >
+              Add Skill
+            </button>
+          </div>
+
+          {/* List of added skills */}
+          {currentActivity.skills && currentActivity.skills.length > 0 ? (
+            <div className="border rounded-lg overflow-hidden">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Skill
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Trials
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Mastery
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {currentActivity.skills.map((skill, index) => (
+                    <tr key={index}>
+                      <td className="px-4 py-2 text-sm text-gray-900">
+                        {skill.skillId}
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-900">
+                        {skill.trials}
+                        <span className="text-xs text-gray-500 ml-1">
+                          ({skill.correct}/{skill.prompted}/{skill.incorrect})
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-900">
+                        {skill.mastery}%
+                      </td>
+                      <td className="px-4 py-2 text-sm font-medium">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSkill(index)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="bg-gray-50 p-4 text-center rounded-lg text-gray-500">
+              No skills added yet.
             </div>
           )}
         </div>
@@ -789,7 +1333,7 @@ export default function ActivityForm({
               <div className="relative">
                 <select
                   name="reinforcerSelect"
-                  value={currentActivity.reinforcement.reinforcerId || ""}
+                  value={currentActivity.reinforcement?.reinforcementId || ""}
                   onChange={handleSelectReinforcer}
                   className="w-full p-2 border rounded"
                   disabled={loadingReinforcers}
@@ -815,8 +1359,8 @@ export default function ActivityForm({
               </label>
               <input
                 type="text"
-                name="reinforcement.reinforcerName"
-                value={currentActivity.reinforcement.reinforcerName}
+                name="reinforcement.reinforcementName"
+                value={currentActivity.reinforcement?.reinforcementName || ""}
                 onChange={handleChange}
                 className="w-full p-2 border rounded"
                 placeholder="Enter reinforcer name"
@@ -831,8 +1375,8 @@ export default function ActivityForm({
               </label>
               <input
                 type="text"
-                name="reinforcement.type"
-                value={currentActivity.reinforcement.type}
+                name="reinforcement.reinforcementType"
+                value={currentActivity.reinforcement?.reinforcementType || ""}
                 onChange={handleChange}
                 className="w-full p-2 border rounded"
                 placeholder="Enter reinforcer type"
@@ -846,7 +1390,7 @@ export default function ActivityForm({
             </label>
             <textarea
               name="reinforcement.notes"
-              value={currentActivity.reinforcement.notes || ""}
+              value={currentActivity.reinforcement?.notes || ""}
               onChange={handleChange}
               rows={2}
               className="w-full p-2 border rounded"

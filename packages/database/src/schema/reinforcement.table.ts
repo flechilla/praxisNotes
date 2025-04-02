@@ -5,12 +5,10 @@ import {
   text,
   timestamp,
   pgEnum,
-  integer,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { z } from "zod";
 import { relations } from "drizzle-orm";
-import { sessions } from "./session.table";
+import { organizations } from "./organization.table";
 
 // Define enum for reinforcement types
 export const reinforcementTypeEnum = pgEnum("reinforcement_type", [
@@ -30,19 +28,17 @@ export const reinforcementEffectivenessEnum = pgEnum(
 
 /**
  * Reinforcement table schema
- * Represents reinforcements used during therapy sessions
+ * Represents available reinforcements in the system
+ * Can be organization-specific (organizationId set) or system-wide (organizationId null)
  */
 export const reinforcements = pgTable("reinforcements", {
   id: uuid("id").defaultRandom().primaryKey(),
-  sessionId: uuid("session_id")
-    .references(() => sessions.id, { onDelete: "cascade" })
-    .notNull(),
+  organizationId: uuid("organization_id").references(() => organizations.id, {
+    onDelete: "cascade",
+  }),
   name: varchar("name", { length: 255 }).notNull(),
   type: reinforcementTypeEnum("type").notNull(),
   description: text("description"),
-  frequency: integer("frequency").default(0),
-  effectiveness: reinforcementEffectivenessEnum("effectiveness"),
-  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -51,9 +47,9 @@ export const reinforcements = pgTable("reinforcements", {
  * Define reinforcement relations
  */
 export const reinforcementsRelations = relations(reinforcements, ({ one }) => ({
-  session: one(sessions, {
-    fields: [reinforcements.sessionId],
-    references: [sessions.id],
+  organization: one(organizations, {
+    fields: [reinforcements.organizationId],
+    references: [organizations.id],
   }),
 }));
 
@@ -62,23 +58,7 @@ export type Reinforcement = typeof reinforcements.$inferSelect;
 export type ReinforcementInsert = typeof reinforcements.$inferInsert;
 
 // Zod schemas for validation
-export const insertReinforcementSchema = createInsertSchema(reinforcements, {
-  sessionId: z.string().uuid(),
-  name: z.string().min(1).max(255),
-  type: z.enum([
-    "primary",
-    "secondary",
-    "social",
-    "token",
-    "activity",
-    "other",
-  ]),
-  description: z.string().optional().nullable(),
-  frequency: z.number().int().nonnegative().optional(),
-  effectiveness: z.enum(["low", "medium", "high"]).optional().nullable(),
-  notes: z.string().optional().nullable(),
-}).omit({ id: true, createdAt: true, updatedAt: true });
-
+export const insertReinforcementSchema = createInsertSchema(reinforcements);
 export const selectReinforcementSchema = createSelectSchema(reinforcements);
 
 // Helper functions and constants for working with reinforcements
@@ -105,10 +85,10 @@ export const REINFORCEMENT_EFFECTIVENESS_DESCRIPTIONS: Record<string, string> =
  * @returns Formatted summary string
  */
 export function summarizeReinforcement(
-  reinforcement: Pick<
-    Reinforcement,
-    "name" | "type" | "frequency" | "effectiveness"
-  >,
+  reinforcement: Pick<Reinforcement, "name" | "type"> & {
+    effectiveness?: string | null;
+    frequency?: number;
+  },
 ): string {
   let summary = `Reinforcer: ${reinforcement.name} (${reinforcement.type})`;
 

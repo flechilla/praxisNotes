@@ -1,12 +1,13 @@
 import { db } from "../client";
 import { users, organizationUsers, userRoles } from "../schema";
-import { seed as seedDb } from "drizzle-seed";
+import { hash } from "bcryptjs";
 
 /**
  * Seeds the users table with sample users
  */
 export async function seed() {
   console.log("👤 Seeding users...");
+  const passwordHash = await hash("password123", 12);
 
   try {
     // Create admin user first with fixed email
@@ -20,8 +21,7 @@ export async function seed() {
         isActive: true,
         isEmailVerified: true,
         authProvider: "email",
-        passwordHash:
-          "$2a$10$PLMD3mKmlyWdwwk5m3cG9.h6ZLQoZG7MUdulqUV2jx.sY9wWCNGbm", // 'password123'
+        passwordHash,
       })
       .returning();
 

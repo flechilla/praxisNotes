@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { InitialStatusFormData } from "../../../../lib/types/SessionForm";
+import { InitialStatusFormData } from "@praxisnotes/types/src/SessionForm";
 
 type InitialStatusProps = {
   data: InitialStatusFormData;
@@ -33,7 +33,7 @@ export default function InitialStatus({
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     updateData({ ...data, [name]: value });

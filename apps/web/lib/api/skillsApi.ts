@@ -11,7 +11,7 @@ export const fetchSkillPrograms = async (): Promise<SkillProgramOption[]> => {
       throw new Error(`Error fetching skill programs: ${response.status}`);
     }
 
-    const data = await response.json();
+    const { data } = await response.json();
     return data.programs;
   } catch (error) {
     console.error("Failed to fetch skill programs:", error);
@@ -23,7 +23,7 @@ export const fetchSkillPrograms = async (): Promise<SkillProgramOption[]> => {
  * Fetches target skills for a specific program
  */
 export const fetchTargetsByProgramId = async (
-  programId: string
+  programId: string,
 ): Promise<SkillTargetOption[]> => {
   try {
     const response = await fetch(`/api/skills?programId=${programId}`);

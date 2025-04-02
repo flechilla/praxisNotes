@@ -4,8 +4,7 @@ import React, { useState } from "react";
 import {
   ReinforcementFormData,
   Reinforcer,
-} from "../../../../lib/types/SessionForm";
-import { mockReinforcerOptions } from "../../../../lib/mocks/clientData";
+} from "@praxisnotes/types/src/SessionForm";
 import {
   reinforcerTypeOptions,
   effectivenessOptions,
@@ -63,14 +62,14 @@ export default function Reinforcement({
   const handleReinforcerChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
+    >,
   ) => {
     const { name, value } = e.target;
 
     // Handle reinforcer selection - set both ID and name
     if (name === "reinforcerId") {
       const selectedReinforcer = mockReinforcerOptions.find(
-        (r) => r.id === value
+        (r) => r.id === value,
       );
       setCurrentReinforcer({
         ...currentReinforcer,
@@ -196,7 +195,7 @@ export default function Reinforcement({
                     <p className="text-sm text-gray-600">
                       Effectiveness: {reinforcer.effectiveness}
                       {effectivenessOptions.find(
-                        (opt) => opt.value === reinforcer.effectiveness
+                        (opt) => opt.value === reinforcer.effectiveness,
                       )?.label &&
                         ` (${effectivenessOptions.find((opt) => opt.value === reinforcer.effectiveness)?.label})`}
                     </p>
@@ -308,7 +307,7 @@ export default function Reinforcement({
               <span className="text-sm font-medium">
                 {currentReinforcer.effectiveness || "3"}/5{" "}
                 {effectivenessOptions.find(
-                  (opt) => opt.value === currentReinforcer.effectiveness
+                  (opt) => opt.value === currentReinforcer.effectiveness,
                 )?.label &&
                   `(${effectivenessOptions.find((opt) => opt.value === currentReinforcer.effectiveness)?.label})`}
               </span>

@@ -1,11 +1,7 @@
 {
-  "extends": "@repo/typescript-config/base.json",
+  "extends": "@praxisnotes/typescript-config/base.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "lib": ["ES2021"],
-    "module": "ESNext",
-    "target": "ES2021",
-    "moduleResolution": "node"
+    "outDir": "dist"
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]

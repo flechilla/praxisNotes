@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -16,8 +16,6 @@ export const activityBehaviors = pgTable("activity_behaviors", {
   activityId: uuid("activity_id")
     .references(() => activities.id, { onDelete: "cascade" })
     .notNull(),
-  behaviorName: varchar("behavior_name", { length: 255 }).notNull(),
-  definition: text("definition"),
   intensity: intensityLevelEnum("intensity"),
   interventionUsed: text("intervention_used"), // stored as JSON string
   interventionNotes: text("intervention_notes"),
@@ -47,8 +45,6 @@ export const insertActivityBehaviorSchema = createInsertSchema(
   activityBehaviors,
   {
     activityId: z.string().uuid(),
-    behaviorName: z.string().min(1).max(255),
-    definition: z.string().optional().nullable(),
     intensity: z
       .enum(INTENSITY_LEVEL_VALUES as [string, ...string[]])
       .optional()
@@ -63,8 +59,6 @@ export const selectActivityBehaviorSchema = createSelectSchema(
   {
     id: z.string().uuid(),
     activityId: z.string().uuid(),
-    behaviorName: z.string(),
-    definition: z.string().nullable(),
     intensity: z.string().nullable(),
     interventionUsed: z.string().nullable(),
     interventionNotes: z.string().nullable(),
@@ -119,31 +113,4 @@ export function formatInterventions(interventions: string[]): string {
   }
 
   return interventions.join(", ");
-}
-
-/**
- * Helper function to generate a brief summary of the behavior and intervention
- * @param activityBehavior The activity behavior record
- * @returns Formatted summary string
- */
-export function summarizeBehaviorIntervention(
-  activityBehavior: Pick<
-    ActivityBehavior,
-    "behaviorName" | "intensity" | "interventionUsed"
-  >,
-): string {
-  let summary = `Behavior: ${activityBehavior.behaviorName}`;
-
-  if (activityBehavior.intensity) {
-    summary += ` | Intensity: ${activityBehavior.intensity}`;
-  }
-
-  if (activityBehavior.interventionUsed) {
-    const interventions = parseInterventions(activityBehavior.interventionUsed);
-    if (interventions.length) {
-      summary += ` | Interventions: ${formatInterventions(interventions)}`;
-    }
-  }
-
-  return summary;
 }

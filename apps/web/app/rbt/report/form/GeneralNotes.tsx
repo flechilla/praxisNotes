@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { GeneralNotesFormData } from "../../../../lib/types/SessionForm";
+import { GeneralNotesFormData } from "@praxisnotes/types/src/SessionForm";
 
 type GeneralNotesProps = {
   data: GeneralNotesFormData;

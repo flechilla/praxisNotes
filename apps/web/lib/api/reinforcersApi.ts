@@ -1,15 +1,36 @@
-// Mock data for reinforcers (in a real app, this would come from an API)
-import { mockReinforcers, ReinforcerOption } from "../mocks/reinforcersData";
+import { ReinforcerOption } from "../mocks/reinforcersData";
+import { ReinforcementOption } from "@praxisnotes/types";
 
 /**
  * Fetches all available reinforcers
  * @returns Promise that resolves to an array of reinforcer objects
  */
 export const fetchAllReinforcers = async (): Promise<ReinforcerOption[]> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  try {
+    const response = await fetch("/api/reinforcements");
 
-  return mockReinforcers;
+    if (!response.ok) {
+      throw new Error(`Error fetching reinforcers: ${response.status}`);
+    }
+
+    const { data } = await response.json();
+
+    if (!data.reinforcements || !Array.isArray(data.reinforcements)) {
+      throw new Error("Invalid response format from reinforcements API");
+    }
+
+    return data.reinforcements.map((reinforcer: ReinforcementOption) => ({
+      id: reinforcer.id,
+      name: reinforcer.name,
+      type: reinforcer.type,
+      description: reinforcer.description,
+      category:
+        reinforcer.type.charAt(0).toUpperCase() + reinforcer.type.slice(1),
+    }));
+  } catch (error) {
+    console.error("Failed to fetch reinforcers:", error);
+    throw error;
+  }
 };
 
 /**
@@ -18,14 +39,35 @@ export const fetchAllReinforcers = async (): Promise<ReinforcerOption[]> => {
  * @returns Promise that resolves to a reinforcer object or null if not found
  */
 export const fetchReinforcerById = async (
-  id: string
+  id: string,
 ): Promise<ReinforcerOption | null> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  try {
+    const response = await fetch(`/api/reinforcements?id=${id}`);
 
-  return (
-    mockReinforcers.find(
-      (reinforcer: ReinforcerOption) => reinforcer.id === id
-    ) || null
-  );
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error(`Error fetching reinforcer: ${response.status}`);
+    }
+
+    const { data } = await response.json();
+
+    if (!data.reinforcement) {
+      return null;
+    }
+
+    return {
+      id: data.reinforcement.id,
+      name: data.reinforcement.name,
+      type: data.reinforcement.type,
+      description: data.reinforcement.description,
+      category:
+        data.reinforcement.type.charAt(0).toUpperCase() +
+        data.reinforcement.type.slice(1),
+    };
+  } catch (error) {
+    console.error("Failed to fetch reinforcer:", error);
+    throw error;
+  }
 };

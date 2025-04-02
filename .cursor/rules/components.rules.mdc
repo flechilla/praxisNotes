@@ -1,0 +1,167 @@
+---
+description:  Comprehensive UI component and styling guidelines for a Turborepo project using Shadcn UI, Radix UI, and Tailwind
+globs: 
+alwaysApply: false
+---
+# UI Components and Styling Guidelines
+
+## Architecture Principles
+
+- **Component Location**: 
+  - Implement shared components in `packages/ui`
+  - App-specific components should be in their respective app directories
+  - Break complex views into smaller, reusable components
+
+- **Component Organization**:
+  - Group related components in directories with an index.ts barrel file
+  - Include component tests alongside the component files
+
+## UI Framework and Styling
+
+- Use Shadcn UI components as the foundation with Tailwind CSS for styling
+- Implement responsive design with Tailwind using a mobile-first approach
+- Follow the project's design tokens for consistent spacing, colors, and typography
+
+### Installing New Shadcn Components
+
+```sh
+pnpm dlx shadcn@latest add COMPONENT
+```
+
+Example:
+
+```sh
+pnpm dlx shadcn@latest add progress
+```
+
+### Image Optimization
+
+- Always use `next/image` for optimal performance and responsive behavior:
+
+```tsx
+import Image from 'next/image';
+
+<Image 
+  src="/path/to/image.jpg" 
+  alt="Descriptive alt text" 
+  width={500} 
+  height={300} 
+  priority={isHeroImage}
+  className="rounded-lg"
+/>
+```
+
+## Data Fetching
+
+### SWR for Client-Side Fetching
+
+Use the `swr` package for API GET requests:
+
+```typescript
+const searchParams = useSearchParams();
+const page = searchParams.get("page") || "1";
+const { data, isLoading, error, mutate } = useSWR<PlanHistoryResponse>(
+  `/api/user/planned/history?page=${page}`,
+  {
+    revalidateOnFocus: true,
+    dedupingInterval: 10000,
+  }
+);
+
+// For refreshing data after mutations
+const refreshData = () => mutate();
+```
+
+## Loading and Error States
+
+Use the `LoadingContent` component to handle loading and error states consistently:
+
+```tsx
+<Card>
+  <LoadingContent 
+    loading={isLoading} 
+    error={error}
+    loadingFallback={<Skeleton className="h-40 w-full" />}
+    errorFallback={<ErrorDisplay message={error?.message} retry={() => mutate()} />}
+  >
+    {data && <MyComponent data={data} />}
+  </LoadingContent>
+</Card>
+```
+
+## Form Components
+
+### Input Fields
+
+```tsx
+<Input
+  type="email"
+  name="email"
+  label="Email"
+  placeholder="Enter your email"
+  registerProps={register("email", { 
+    required: "Email is required",
+    pattern: {
+      value: /\S+@\S+\.\S+/,
+      message: "Please enter a valid email"
+    }
+  })}
+  error={errors.email}
+  description="We'll never share your email with anyone else."
+/>
+```
+
+### Textarea
+
+```tsx
+<Input
+  type="text"
+  autosizeTextarea
+  rows={3}
+  name="message"
+  placeholder="Paste in email content"
+  registerProps={register("message", { 
+    required: "Message is required",
+    maxLength: {
+      value: 1000,
+      message: "Message cannot exceed 1000 characters"
+    }
+  })}
+  error={errors.message}
+/>
+```
+
+### Select Dropdown
+
+```tsx
+<Select
+  name="category"
+  label="Category"
+  registerProps={register("category", { required: "Please select a category" })}
+  error={errors.category}
+>
+  <SelectItem value="feature">Feature Request</SelectItem>
+  <SelectItem value="bug">Bug Report</SelectItem>
+  <SelectItem value="other">Other</SelectItem>
+</Select>
+```
+
+## Accessibility Best Practices
+
+- Ensure all interactive elements have appropriate ARIA attributes
+- Maintain proper heading hierarchy (h1, h2, h3, etc.)
+- Use semantic HTML elements (`<button>`, `<nav>`, `<article>`, etc.)
+- Ensure color contrast meets WCAG standards (minimum ratio of 4.5:1)
+- Make all functionality available via keyboard
+
+## Performance Considerations
+
+- Implement virtualization for long lists using `react-virtualized` or `react-window`
+- Lazy load components below the fold using `next/dynamic` or React's `Suspense` and `lazy`
+- Optimize images with appropriate sizes and formats
+
+## Testing Guidelines
+
+- Write component tests for shared UI components in the `packages/ui` directory
+- Test visual appearance with Storybook and implement visual regression tests
+- Ensure all interactive components have proper unit tests for functionality
