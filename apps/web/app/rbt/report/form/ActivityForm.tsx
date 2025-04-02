@@ -954,7 +954,9 @@ export default function ActivityForm({
           </div>
 
           {/* List of added prompts */}
-          {currentActivity.promptsUsed.length > 0 ? (
+          {currentActivity &&
+          currentActivity.promptsUsed &&
+          currentActivity.promptsUsed.length > 0 ? (
             <div className="border rounded-lg overflow-hidden">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">

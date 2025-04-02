@@ -1,31 +1,42 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { skillPrograms, skillTargets } from "../../../lib/mocks/skillsData";
+import {
+  createSuccessResponse,
+  withApiMiddleware,
+  validateQuery,
+  z,
+} from "../../../lib/api";
 
-export async function GET(request: NextRequest) {
-  try {
-    // Get query parameters
-    const { searchParams } = new URL(request.url);
-    const programId = searchParams.get("programId");
+// Schema for validating query parameters
+const getSkillsQuerySchema = z.object({
+  programId: z.string().optional(),
+});
 
-    // Simulate database operation delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
+// GET handler for skills
+async function getHandler(request: NextRequest) {
+  // Validate query parameters
+  const queryResult = await validateQuery(request, getSkillsQuerySchema);
+  if (!queryResult.success) {
+    return queryResult.response;
+  }
 
-    // Return data based on query parameters
-    if (programId) {
-      // If programId is provided, return targets for that program
-      const targets = skillTargets.filter(
-        (target) => target.programId === programId
-      );
-      return NextResponse.json({ targets }, { status: 200 });
-    } else {
-      // If no programId is provided, return all programs
-      return NextResponse.json({ programs: skillPrograms }, { status: 200 });
-    }
-  } catch (error) {
-    console.error("Error fetching skills data:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch skills data" },
-      { status: 500 }
+  const { programId } = queryResult.data;
+
+  // Simulate database operation delay
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  // Return data based on query parameters
+  if (programId) {
+    // If programId is provided, return targets for that program
+    const targets = skillTargets.filter(
+      (target) => target.programId === programId,
     );
+    return createSuccessResponse({ targets });
+  } else {
+    // If no programId is provided, return all programs
+    return createSuccessResponse({ programs: skillPrograms });
   }
 }
+
+// Apply middleware to our handler
+export const GET = withApiMiddleware(getHandler);

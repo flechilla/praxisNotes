@@ -105,7 +105,6 @@ export const authOptions: NextAuthOptions = {
           isDefaultOrg: token.isDefault as boolean,
         },
       };
-      console.log("outputSession", outputSession);
       return outputSession;
     },
   },

@@ -66,7 +66,7 @@ export class ClientService {
         throw new Error("Failed to fetch clients");
       }
 
-      const data = await response.json();
+      const { data } = await response.json();
       return data.map((client: Client) => ({
         ...client,
         createdAt: new Date(client.createdAt),

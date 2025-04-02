@@ -18,7 +18,7 @@ export default function RBTDashboard() {
           throw new Error("Failed to fetch clients");
         }
 
-        const data = await response.json();
+        const { data } = await response.json();
         // Transform date strings to Date objects
         const clientsWithDates = data.map((client: any) => ({
           ...client,

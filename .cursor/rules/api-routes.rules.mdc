@@ -1,0 +1,207 @@
+---
+description: API Routes Implementation Guidelines
+globs: 
+alwaysApply: false
+---
+# API Routes Implementation Guidelines
+
+## Overview
+
+This document provides guidelines for implementing API routes in the PraxisNotes application using our standardized API layer. Following these guidelines ensures consistent, secure, and maintainable API endpoints across the application.
+
+## File Structure
+
+- Place API route handlers in the `apps/web/app/api/` directory
+- Use nested directories to organize resources (e.g., `/api/clients/`, `/api/reports/`)
+- Keep route files named `route.ts` following Next.js App Router conventions
+- Store resource-specific schemas in `apps/web/lib/schemas/<resource>.schema.ts`
+
+## Core Principles
+
+- Always use the standardized API utilities for all responses
+- Validate all incoming data with Zod schemas
+- Apply middleware to all route handlers for consistent authentication and error handling
+- Follow RESTful conventions for endpoint design and HTTP methods
+
+## Implementation Pattern
+
+### 1. Basic Route Structure
+
+```typescript
+import { NextRequest } from "next/server";
+import {
+  createSuccessResponse,
+  withApiMiddleware,
+  validateQuery,
+  validateBody,
+  z
+} from "../../../lib/api";
+
+// Define handler functions
+async function getHandler(request: NextRequest) {
+  // Implementation...
+}
+
+async function postHandler(request: NextRequest) {
+  // Implementation...
+}
+
+// Export wrapped handlers
+export const GET = withApiMiddleware(getHandler);
+export const POST = withApiMiddleware(postHandler, { requireAuth: true });
+```
+
+### 2. Input Validation
+
+Always validate query parameters and request bodies:
+
+```typescript
+// Import or define schemas
+import { entityQuerySchema, createEntitySchema } from "../../../lib/schemas/entity.schema";
+
+// Query validation
+const queryResult = await validateQuery(request, entityQuerySchema);
+if (!queryResult.success) {
+  return queryResult.response;
+}
+
+// Body validation
+const bodyResult = await validateBody(request, createEntitySchema);
+if (!bodyResult.success) {
+  return bodyResult.response;
+}
+```
+
+### 3. Response Formatting
+
+Use the appropriate response utility for your use case:
+
+```typescript
+// Success with data
+return createSuccessResponse(data);
+
+// Success with data and metadata
+return createSuccessResponse(data, { message: "Operation successful" });
+
+// Paginated list
+return createListResponse(items, {
+  page: 1,
+  limit: 10,
+  total: 100,
+  totalPages: 10
+});
+
+// Status response
+return createStatusResponse(true, "Entity deleted successfully");
+
+// Not found
+return createNotFoundResponse("Entity not found");
+```
+
+### 4. Error Handling
+
+Use the standardized error handling approach:
+
+```typescript
+try {
+  // Operation that might fail
+  const result = await someOperation();
+  return createSuccessResponse(result);
+} catch (error) {
+  // For custom handling
+  if (error instanceof SomeSpecificError) {
+    return createErrorResponse(
+      ErrorCode.BAD_REQUEST,
+      "Specific error message",
+      { details: error.details }
+    );
+  }
+  
+  // Or let middleware handle it
+  throw error;
+}
+```
+
+### 5. Authentication & Authorization
+
+Configure authentication and authorization via middleware options:
+
+```typescript
+// Public endpoint
+export const GET = withApiMiddleware(getHandler);
+
+// Authenticated endpoint
+export const POST = withApiMiddleware(postHandler, { 
+  requireAuth: true 
+});
+
+// Role-based endpoint
+export const DELETE = withApiMiddleware(deleteHandler, {
+  requireAuth: true,
+  requiredRoles: ["admin"]
+});
+```
+
+## Schema Definitions
+
+- Create dedicated schema files for each resource type
+- Place schemas in `apps/web/lib/schemas/<resource>.schema.ts`
+- Define consistent patterns for query, create, update, and response schemas
+- Reuse schema components where appropriate
+
+```typescript
+import { z } from "zod";
+
+// Query parameters schema
+export const entityQuerySchema = z.object({
+  id: z.string().uuid().optional(),
+  search: z.string().optional(),
+  // other query parameters...
+});
+
+// Creation schema
+export const createEntitySchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  // other fields...
+});
+
+// Update schema (partial version of create schema)
+export const updateEntitySchema = createEntitySchema.partial().extend({
+  id: z.string().uuid("Invalid ID"),
+});
+```
+
+## HTTP Methods
+
+- `GET`: Retrieve resources (should not modify data)
+- `POST`: Create new resources
+- `PUT`: Replace a resource entirely
+- `PATCH`: Update parts of a resource
+- `DELETE`: Remove a resource
+
+## Status Codes
+
+Our API layer automatically maps error codes to appropriate HTTP status codes:
+
+- `200 OK`: Successful operation
+- `400 Bad Request`: Invalid input
+- `401 Unauthorized`: Authentication required
+- `403 Forbidden`: Insufficient permissions
+- `404 Not Found`: Resource not found
+- `422 Unprocessable Entity`: Validation errors
+- `500 Internal Server Error`: Server-side issues
+
+## Security Considerations
+
+- Always validate and sanitize input data
+- Use authentication middleware for protected endpoints
+- Apply role-based authorization where needed
+- Avoid exposing sensitive data in responses
+- Implement rate limiting for public endpoints
+
+## Testing API Routes
+
+- Test validation errors by providing invalid data
+- Test authentication by simulating both authenticated and unauthenticated requests
+- Test authorization by simulating requests with different user roles
+- Test error handling by forcing errors in the request handlers 
