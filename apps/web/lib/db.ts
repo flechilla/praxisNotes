@@ -1,4 +1,4 @@
-import { db as dbClient, queryClient } from "@praxisnotes/database";
+import { db as dbClient } from "@praxisnotes/database";
 import { ErrorCode } from "@praxisnotes/types";
 
 /**
@@ -57,7 +57,7 @@ export async function withTransaction<T>(
   operation: () => Promise<T>,
 ): Promise<T> {
   try {
-    const result = await queryClient.transaction(async (tx: unknown) => {
+    const result = await dbClient.transaction(async (tx: unknown) => {
       // Set the transaction context for the operation
       const txContext: TransactionContext = { tx };
       return await operation();
@@ -83,7 +83,7 @@ export async function withTransaction<T>(
 export async function checkDbHealth(): Promise<boolean> {
   try {
     // Simple query to check database connectivity
-    await queryClient.query(`SELECT 1`);
+    await dbClient.execute(`SELECT 1`);
     return true;
   } catch (error) {
     console.error("Database health check failed:", error);
